@@ -23,10 +23,10 @@ function validateEventId(req, res, next) {
   next();
 }
 function validateNewEvent(req, res, next) {
-  const { eventTitle, eventDate, eventAddress, eventOrganizer } = req.body;
+  const { eventTitle, eventDate, eventAddress, eventOrganizer, eventPrice} = req.body;
 
-  if (!eventTitle || !eventDate || !eventAddress || !eventOrganizer) {
-      return res.status(400).json({ error: 'Event title, date, address, and organizer are required fields.' });
+  if (!eventTitle || !eventDate || !eventAddress || !eventOrganizer || !eventPrice) {
+      return res.status(400).json({ error: 'Event title, date, address, price and organizer are required fields.' });
   }
 
   next();

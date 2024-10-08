@@ -69,9 +69,8 @@ async function updateUser(req, res) {
         }
 
         
-        user.firstName = updatedUserData.firstName || user.firstName;
-        user.lastName = updatedUserData.lastName || user.lastName;
-        user.middleName = updatedUserData.middleName || user.middleName;
+        user.userName = updatedUserData.userName || user.usertName;
+        user.mobileNo = updatedUserData.mobileNo || user.mobileNo;
         user.emailID = updatedUserData.emailID || user.emailID;
         user.password = updatedUserData.password || user.password;
 
