@@ -7,6 +7,7 @@ const ObjectId=require('mongoose').Types.ObjectId;
 require('dotenv').config();
 
 module.exports = {
+    validateLogin: validateLogin,
     getAllUsers: getAllUsers,
     getUserById: getUserById,
     createUser: createUser,
@@ -69,7 +70,7 @@ async function updateUser(req, res) {
         }
 
         
-        user.userName = updatedUserData.userName || user.usertName;
+        user.userName = updatedUserData.userName || user.userName;
         user.mobileNo = updatedUserData.mobileNo || user.mobileNo;
         user.emailID = updatedUserData.emailID || user.emailID;
         user.password = updatedUserData.password || user.password;
@@ -102,3 +103,18 @@ async function deleteUser(req, res) {
 }
 
 
+async function validateLogin(req, res) {
+    const { mobileNo, password } = req.body;
+  
+    try {
+      const user = await User.login(mobileNo, password);
+      const token = createToken(user._id);
+      res.cookie('jwt', token, { httpOnly: true, maxAge: 2 * 60 * 60 * 1000 });
+      res.status(200).json({ user: user._id });
+    } 
+    catch (err) {
+      
+      res.status(400).json({ message: 'Invalid mobile number or password' });
+    }
+  
+  }

@@ -5,6 +5,7 @@ const User = require('../modules/user.module');
 const app = express();
 app.use(bodyParser.json());
 module.exports = {
+    checkLogin: checkLogin,
     validateUserId: validateUserId,
     validateNewUser:validateNewUser,
     validateUpdateUser: validateUpdateUser
@@ -26,6 +27,8 @@ function validateUserId(req, res, next) {
     }
     next();
 }
+
+
 
 async function validateNewUser(req, res, next) {
 
@@ -69,13 +72,15 @@ async function validateNewUser(req, res, next) {
     return res.status(500).json({ error: 'Error checking for existing user.' });
   }
 
-  try {
-    const existingUser = await User.findOne({ emailID: emailID });
-    if (existingUser) {
-      return res.status(400).json({ error: 'Email already exist.' });
+  if(emailID){
+    try {
+      const existingUser = await User.findOne({ emailID: emailID });
+      if (existingUser) {
+        return res.status(400).json({ error: 'Email already exist.' });
+      }
+    } catch (err) {
+      return res.status(500).json({ error: 'Error checking for existing user.' });
     }
-  } catch (err) {
-    return res.status(500).json({ error: 'Error checking for existing user.' });
   }
   next();
 }
@@ -114,5 +119,21 @@ async function validateNewUser(req, res, next) {
             return res.status(400).json({ error: 'Email already exists.' });
         }
    }
+  next();
+}
+
+
+
+
+async function checkLogin(req, res, next) {
+
+  const { mobileNo, password } = req.body;
+
+  if (!password || !mobileNo) {
+      return res.status(400).json({ error: 'Mobile Number and password are required fields.' });
+  }
+  if (password < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters long..' });
+}
   next();
 }
