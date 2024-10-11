@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
-const event = mongoose.model('event',{
+const eventSchema = new mongoose.Schema({
     eventTitle: { type: String },
-    eventDate: { type: String },
+    eventDate: { type: Date },
     eventAddress: { type: String },
     eventOrganizer: { type: String },
     imageUrl: { type: String },
@@ -10,6 +10,13 @@ const event = mongoose.model('event',{
     eventDescription: { type: String }
 });
 
+// Override toJSON method to format the eventDate when sending data out
+eventSchema.methods.toJSON = function() {
+    const event = this.toObject();
+    event.eventDate = event.eventDate.toISOString().split('T')[0]; // Format date as YYYY-MM-DD
+    return event;
+};
 
+const Event = mongoose.model('Event', eventSchema);
 
-module.exports = event;
+module.exports = Event;
