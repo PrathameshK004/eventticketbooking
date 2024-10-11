@@ -55,7 +55,7 @@ async function createUser(req, res) {
     newUser = await User.create(req.body);
     const token =  createToken(newUser._id);
     res.cookie('jwt', token, {httpOnly: true, maxAge: 2 * 60 * 60 * 1000});
-    res.status(201).json({newUser: newUser._id});
+    res.status(201).json({newUser: newUser.userName});
 }
 
 async function updateUser(req, res) {
@@ -104,17 +104,31 @@ async function deleteUser(req, res) {
 
 
 async function validateLogin(req, res) {
-    const { mobileNo, password } = req.body;
+    const { mobile_email, password } = req.body;
+  
+    const mobileRegex = /^[0-9]{10}$/;        
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   
     try {
-      const user = await User.login(mobileNo, password);
-      const token = createToken(user._id);
-      res.cookie('jwt', token, { httpOnly: true, maxAge: 2 * 60 * 60 * 1000 });
-      res.status(200).json({ user: user._id });
-    } 
-    catch (err) {
-      
-      res.status(400).json({ message: 'Invalid mobile number or password' });
+        let user;
+
+        if (mobileRegex.test(mobile_email)) {
+   
+            user = await User.loginWithMobile(mobile_email, password);
+        } else if (emailRegex.test(mobile_email)) {
+          
+            user = await User.loginWithEmail(mobile_email, password);
+        } else {
+            return res.status(400).json({ message: 'Invalid mobile number or email format' });
+        }
+
+        const token = createToken(user._id);
+        res.cookie('jwt', token, { httpOnly: true, maxAge: 2 * 60 * 60 * 1000 });
+        res.status(200).json({ user: user.userName });
+
+    } catch (err) {
+        console.error("Login Error: ", err.message || err);
+
+        res.status(400).json({ message: err.message || 'Invalid mobile number/email or password' });
     }
-  
-  }
+}

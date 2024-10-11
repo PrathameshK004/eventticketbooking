@@ -18,18 +18,29 @@ userSchema.pre('save', async function(next){
     next();
 });
 
-// static method to login user
-userSchema.statics.login = async function(mobileNo, password) {
-    const user = await this.findOne({ mobileNo });
-    if (user) {
+userSchema.statics.loginWithMobile = async function(mobileNo, password) {
+  const user = await this.findOne({ mobileNo : mobileNo });
+  if (user) {
       const auth = await bcrypt.compare(password, user.password);
       if (auth) {
-        return user;
+          return user;
       }
-      throw Error('Incorrect Password');
-    }
-    throw Error('Incorrect Mobile Number');
-  };
+      throw Error('Incorrect password');
+  }
+  throw Error('Mobile number not registered');
+};
+
+userSchema.statics.loginWithEmail = async function(emailID, password) {
+  const user = await this.findOne({ emailID : emailID });
+  if (user) {
+      const auth = await bcrypt.compare(password, user.password);
+      if (auth) {
+          return user;
+      }
+      throw Error('Incorrect password');
+  }
+  throw Error('Email not registered');
+};
 
 const User = mongoose.model('User', userSchema);
-module.exports= User;
+module.exports = User;
