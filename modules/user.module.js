@@ -5,7 +5,19 @@ const userSchema = new mongoose.Schema({
     userName: { type: String},
     mobileNo: { type: Number},
     emailID: { type: String},
-    password: { type: String}
+    password: { type: String},
+    roles: {
+        type: [String],
+        enum: ['user', 'organizer', 'admin']
+    }
+});
+
+userSchema.pre('save', function(next) {
+    if (!this.roles.includes('user')) {
+            this.roles.unshift('user');
+    }
+    this.roles = [...new Set(this.roles)];
+    next(); 
 });
 
 

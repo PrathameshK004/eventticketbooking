@@ -7,7 +7,7 @@ router.get('/searchEvents', eventController.searchEventsByKeyword);
 router.get('/allEvents', eventController.getAllEvents);
 router.get('/:eventId', eventInterceptor.validateEventId, eventController.getEventById);
 router.post('/addEvent', eventInterceptor.validateNewEvent, eventController.createEvent);
-router.put('/:eventId', eventInterceptor.validateEventId, eventController.updateEvent);
+router.put('/:eventId', eventInterceptor.validateUpdateEvent, eventController.updateEvent);
 router.delete('/:eventId', eventInterceptor.validateEventId, eventController.deleteEvent);
 
 

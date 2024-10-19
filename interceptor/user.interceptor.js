@@ -32,7 +32,7 @@ function validateUserId(req, res, next) {
 
 async function validateNewUser(req, res, next) {
 
-  const { userName, mobileNo, emailID, password } = req.body;
+  const { userName, mobileNo, emailID, password} = req.body;
 
   if (!userName || !password || !emailID) {
       return res.status(400).json({ error: 'UserName, Email and password are required fields.' });

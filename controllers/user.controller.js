@@ -51,12 +51,27 @@ const createToken = (id) => {
 }
 
 async function createUser(req, res) {
+    try {
+        const newUser = await User.create(req.body);
 
-    newUser = await User.create(req.body);
-    const token =  createToken(newUser._id);
-    res.cookie('jwt', token, {httpOnly: true, maxAge: 2 * 60 * 60 * 1000});
-    res.status(201).json({newUser: newUser.userName});
+        const token = createToken(newUser._id);
+
+        res.cookie('jwt', token, { httpOnly: true, maxAge: 2 * 60 * 60 * 1000 });
+
+        res.status(201).json({ newUser: newUser.userName });
+    } catch (error) {
+        if (error.name === 'ValidationError') {
+            const errorMessages = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({
+                message: "Validation error occurred",
+                errors: errorMessages 
+            });
+        }
+        console.error(error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
 }
+
 
 async function updateUser(req, res) {
     const userId = req.params.userId; 

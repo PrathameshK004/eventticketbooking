@@ -1,29 +1,31 @@
 const mongoose = require('mongoose');
 
 const eventSchema = new mongoose.Schema({
-    eventTitle: { type: String },
-    eventDate: { type: Date },
-    eventAddress: { type: String },
-    eventOrganizer: { type: String },
-    imageUrl: { type: String },
-    eventPrice: { type: Number },
-    eventDescription: { type: String },
-    eventLanguage: { type: String},
-    eventRating: {type: Number },
-    eventCapacity: {type: Number},
-    eventDuration: {
-        type: String,
-        validate: {
-            validator: function(value) {
-                // Example regex for duration format: "X hours" or "Y minutes"
-                return /^\d+\s+(hours?|minutes?)$/.test(value);
-            },
-            message: props => `${props.value} is not a valid duration format! Use "X hours" or "Y minutes".`
-        }
-    },    
-    eventFeatures: {type: [String]},
-    eventTags: {type: [String]}
-});
+    eventTitle: { type: String, required: true, trim: true },
+    eventDate: { type: Date, required: true, trim: true},
+    eventAddress: { type: String, required: true, trim: true },
+    eventOrganizer: { type: String, required: true, trim: true },
+    eventPrice: { type: Number, required: true },
+    imageUrl: {type: String, required: true},
+    eventDescription: { type: String, required: true, trim: true },
+    eventLanguage: { type: String, required: true, trim: true },
+    eventRating: { type: Number, min: 0, max: 5 },
+    eventCapacity: { type: Number, required: true, min: 1 },
+    eventDuration: { type: String, required: true, trim: true,
+         validate: {
+        validator: function(value) {
+            // Example regex for duration format: "X hours" or "Y minutes"
+            return /^\d+\s+(hours?|minutes?)$/.test(value);
+        },
+        message: props => `${props.value} is not a valid duration format! Use "X hours" or "Y minutes".`
+    }},
+    eventFeatures: [{ type: String, trim: true }],
+    eventTags: [{ type: String, trim: true }],
+    eventOrgInsta: { type: String, trim: true },
+    eventOrgX: { type: String, trim: true },
+    eventOrgFacebook: { type: String, trim: true }
+  });
+  
 
 // Override toJSON method to format the eventDate when sending data out
 eventSchema.methods.toJSON = function() {
