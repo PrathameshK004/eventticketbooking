@@ -6,7 +6,7 @@ const eventSchema = new mongoose.Schema({
     eventAddress: { type: String, required: true, trim: true },
     eventOrganizer: { type: String, required: true, trim: true },
     eventPrice: { type: Number, required: true },
-    imageUrl: {type: String, required: true},
+    imageUrl: {type: String},
     eventDescription: { type: String, required: true, trim: true },
     eventLanguage: { type: String, required: true, trim: true },
     eventRating: { type: Number, min: 0, max: 5 },
