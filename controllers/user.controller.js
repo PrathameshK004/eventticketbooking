@@ -12,7 +12,8 @@ module.exports = {
     getUserById: getUserById,
     createUser: createUser,
     updateUser: updateUser,
-    deleteUser:deleteUser
+    deleteUser:deleteUser,
+    logoutUser:logoutUser
 }
 
 
@@ -146,4 +147,8 @@ async function validateLogin(req, res) {
 
         res.status(400).json({ message: err.message || 'Invalid mobile number/email or password' });
     }
+}
+
+function logoutUser(req, res) {
+    res.cookie('jwt', '', { maxAge : 1 });
 }
