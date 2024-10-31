@@ -2,7 +2,14 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const app = express();
-const Event = require('../modules/event.module'); 
+const Event = require('../modules/event.module');
+
+function isDateInPast(date) {
+  const currentDate=new Date();
+  currentDate=currentDate.toISOString().split('T')[0];
+  return new Date(date) < currentDate;
+}
+
 app.use(bodyParser.json());
 
 module.exports = {
@@ -30,11 +37,13 @@ function validateEventData(eventData, isUpdate = false) {
 
   const requiredFields = ['eventTitle', 'eventDate', 'eventAddress', 'eventOrganizer', 'eventPrice', 'eventLanguage', 'eventDescription', 'eventDuration', 'eventCapacity'];
   
-  requiredFields.forEach(field => {
-    if (!isUpdate && !eventData[field]) {
-      errors.push(`${field} is required.`);
-    }
-  });
+  if (!isUpdate) {
+    requiredFields.forEach(field => {
+      if (!eventData[field]) {
+        errors.push(`${field} is required.`);
+      }
+    });
+  }
 
   if (eventData.eventRating !== undefined && (eventData.eventRating < 0 || eventData.eventRating > 5)) {
     errors.push('Event rating must be between 0 and 5.');
@@ -56,6 +65,10 @@ function validateEventData(eventData, isUpdate = false) {
     errors.push('Event tags must be an array.');
   }
 
+  if (eventData.eventDate && isDateInPast(eventData.eventDate)) {
+    errors.push('Event date cannot be in the past.');
+  }
+
   return errors;
 }
 
@@ -66,6 +79,17 @@ async function checkExistingEvent(eventData, excludeId = null) {
     eventAddress: eventData.eventAddress,
     eventOrganizer: eventData.eventOrganizer
   };
+
+  // Only include fields that are present in eventData
+  Object.keys(query).forEach(key => {
+    if (eventData[key] === undefined) {
+      delete query[key];
+    }
+  });
+
+  if (Object.keys(query).length === 0) {
+    return null; // No need to check for duplicates if no relevant fields are being updated
+  }
 
   if (excludeId) {
     query._id = { $ne: excludeId };
@@ -80,6 +104,10 @@ async function validateNewEvent(req, res, next) {
 
   if (errors.length > 0) {
     return res.status(400).json({ errors });
+  }
+
+  if (isDateInPast(eventData.eventDate)) {
+    return res.status(400).json({ error: 'Event date cannot be in the past.' });
   }
 
   try {
@@ -108,6 +136,10 @@ async function validateUpdateEvent(req, res, next) {
     return res.status(400).json({ errors });
   }
 
+  if (eventData.eventDate && isDateInPast(eventData.eventDate)) {
+    return res.status(400).json({ error: 'Event date cannot be in the past.' });
+  }
+
   try {
     const existingEvent = await checkExistingEvent(eventData, eventId);
     if (existingEvent) {
@@ -119,8 +151,11 @@ async function validateUpdateEvent(req, res, next) {
       return res.status(404).json({ error: 'Event not found.' });
     }
 
-    // Update the event with new data
-    Object.assign(event, eventData);
+    // Update only the fields provided in the request body
+    Object.keys(eventData).forEach(key => {
+      event[key] = eventData[key];
+    });
+
     await event.save();
 
     req.updatedEvent = event;

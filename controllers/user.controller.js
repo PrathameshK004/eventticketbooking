@@ -59,7 +59,10 @@ async function createUser(req, res) {
 
         res.cookie('jwt', token, { httpOnly: true, maxAge: 2 * 60 * 60 * 1000 });
 
-        res.status(201).json({ newUser: newUser.userName });
+        res.status(201).json({
+            userId: newUser._id, 
+            userName: newUser.userName
+        });
     } catch (error) {
         if (error.name === 'ValidationError') {
             const errorMessages = Object.values(error.errors).map(err => err.message);
@@ -140,7 +143,11 @@ async function validateLogin(req, res) {
 
         const token = createToken(user._id);
         res.cookie('jwt', token, { httpOnly: true, maxAge: 2 * 60 * 60 * 1000 });
-        res.status(200).json({ user: user.userName });
+        res.status(200).json({ 
+            userId: user._id,
+            user: user.userName 
+        });
+       
 
     } catch (err) {
         console.error("Login Error: ", err.message || err);
