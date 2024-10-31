@@ -5,10 +5,10 @@ const app = express();
 const Event = require('../modules/event.module');
 
 function isDateInPast(date) {
-  const currentDate=new Date();
-  currentDate=currentDate.toISOString().split('T')[0];
-  return new Date(date) < currentDate;
+  const currentDate = new Date().toISOString().split('T')[0]; // Get current date in 'YYYY-MM-DD' format
+  return new Date(date) < new Date(currentDate); // Compare the given date with the current date
 }
+
 
 app.use(bodyParser.json());
 
