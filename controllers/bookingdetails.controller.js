@@ -88,6 +88,11 @@ async function updateBooking(req, res) {
             return res.status(404).json({ error: 'Booking not found' });
         }
 
+        // Prevent changing from "Cancelled" or "Completed" back to "Booked"
+        if ((booking.status === 'Cancelled' || booking.status === 'Completed') && updatedStatus === 'Booked') {
+            return res.status(400).json({ error: 'Cancelled or completed bookings cannot be rebooked' });
+        }
+
         // Allow cancellation only if the current status is "Booked"
         if (updatedStatus === 'Cancelled' && booking.status !== 'Booked') {
             return res.status(400).json({ error: 'Only "Booked" bookings can be cancelled' });
@@ -112,9 +117,10 @@ async function updateBooking(req, res) {
         await booking.save(); // Save the booking with the updated status
         res.status(200).json(booking);
     } catch (err) {
-        res.status(500).json({ error: 'Internal server error ' +err});
+        res.status(500).json({ error: 'Internal server error ' + err });
     }
 }
+
 
 async function deleteBooking(req, res) {
     const bookingId = req.params.bookingId;

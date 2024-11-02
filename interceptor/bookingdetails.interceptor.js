@@ -8,10 +8,10 @@ const app = express();
 app.use(bodyParser.json());
 
 module.exports = {
-    validateBookingId: validateBookingId,
-    validateUserId: validateUserId,
-    validateNewBooking: validateNewBooking,
-    validateUpdateBooking: validateUpdateBooking
+    validateBookingId,
+    validateUserId,
+    validateNewBooking,
+    validateUpdateBooking
 };
 
 function isUuidValid(id) {
@@ -46,10 +46,10 @@ async function validateUserId(req, res, next) {
 }
 
 async function validateNewBooking(req, res, next) {
-    const { userId, eventId, eventTitle, bookingDate, eventDate, noOfPeople, totalAmount, status } = req.body;
+    const { userId, eventId, eventTitle, bookingDate, eventDate, noOfPeople, totalAmount, status, nameOfPeople } = req.body;
 
-    if (!userId || !eventId || !noOfPeople || !totalAmount ) {
-        return res.status(400).json({ error: 'User ID, EventID, Event title, Booking date, Event date, Number of people, Total amount, and Status are required fields.' });
+    if (!userId || !eventId || !noOfPeople || !totalAmount || !nameOfPeople) {
+        return res.status(400).json({ error: 'User ID, Event ID, Number of people, Total amount, and Names of people are required fields.' });
     }
     
     if (typeof userId !== 'string' || !isUuidValid(userId)) {
@@ -71,6 +71,11 @@ async function validateNewBooking(req, res, next) {
 
     if (typeof totalAmount !== 'number' || totalAmount < 0) {
         return res.status(400).json({ error: 'Total amount must be a non-negative number.' });
+    }
+
+    // Validate nameOfPeople array length
+    if (!Array.isArray(nameOfPeople) || nameOfPeople.length !== noOfPeople) {
+        return res.status(400).json({ error: `The number of names provided (${nameOfPeople.length}) does not match the number of people (${noOfPeople}).` });
     }
 
     next();
