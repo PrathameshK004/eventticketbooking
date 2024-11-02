@@ -5,6 +5,7 @@ let bookingdetailsInterceptor = require('../interceptor/bookingdetails.intercept
 
 router.get('/allBookings', bookingdetailsController.getAllBookings);
 router.get('/userBookings/:userId', bookingdetailsInterceptor.validateUserId, bookingdetailsController.getUserBookings);
+router.get('/eventBookings/:eventId', bookingdetailsInterceptor.validateEventId, bookingdetailsController.getEventBookings);
 router.get('/:bookingId', bookingdetailsInterceptor.validateBookingId, bookingdetailsController.getBookingById);
 router.post('/addBookingDetails', bookingdetailsInterceptor.validateNewBooking, bookingdetailsController.createBooking);
 router.put('/:bookingId', bookingdetailsInterceptor.validateBookingId, bookingdetailsInterceptor.validateUpdateBooking, bookingdetailsController.updateBooking);

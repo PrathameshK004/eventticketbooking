@@ -10,7 +10,8 @@ module.exports = {
     createBooking: createBooking,
     updateBooking: updateBooking,
     deleteBooking: deleteBooking,
-    getUserBookings: getUserBookings
+    getUserBookings: getUserBookings,
+    getEventBookings: getEventBookings
 };
 
 async function getAllBookings(req, res) {
@@ -122,6 +123,7 @@ async function updateBooking(req, res) {
 }
 
 
+
 async function deleteBooking(req, res) {
     const bookingId = req.params.bookingId;
 
@@ -153,3 +155,26 @@ async function getUserBookings(req, res) {
         res.status(500).json({ error: 'Failed to fetch user bookings' });
     }
 }
+
+
+
+async function getEventBookings(req, res) {
+    const { eventId } = req.params; // Get eventId from request parameters
+
+    try {
+        // Fetch bookings for the given eventId
+        const bookings = await Booking.find({ eventId: eventId  });
+
+        // Check if any bookings were found
+        if (bookings.length === 0) {
+            return res.status(404).json({ message: 'No bookings found for this event.' });
+        }
+
+        // Return the list of bookings
+        res.status(200).json(bookings);
+    } catch (error) {
+        // Handle any errors that occur during the query
+        res.status(500).json({ error: 'Error retrieving bookings: ' + error.message });
+    }
+}
+

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const Booking = require('../modules/bookingdetails.module');
 const User = require('../modules/user.module'); 
+const Event = require('../modules/event.module'); 
 
 const app = express();
 app.use(bodyParser.json());
@@ -10,6 +11,7 @@ app.use(bodyParser.json());
 module.exports = {
     validateBookingId,
     validateUserId,
+    validateEventId,
     validateNewBooking,
     validateUpdateBooking
 };
@@ -108,3 +110,22 @@ async function validateUpdateBooking(req, res, next) {
         res.status(500).json({ error: 'An error occurred while validating the booking. ' + error });
     }
 }
+
+async function validateEventId(req, res, next) {
+    const { eventId } = req.params;
+    if (!eventId || !isUuidValid(eventId)) {
+        return res.status(400).json({ error: 'Event ID is required and must be a valid UUID.' });
+    }
+    try {
+        const eventExists = await Event.findById(eventId);
+        if (!eventExists) {
+            return res.status(404).json({ error: 'Event ID not found in the database.' });
+        }
+        next();
+    } catch (error) {
+        res.status(500).json({ error: 'An error occurred while validating the event ID. ' + error });
+    }
+}
+
+
+
