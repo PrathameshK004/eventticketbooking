@@ -55,7 +55,12 @@ async function createUser(req, res) {
 
         const token = createToken(newUser._id);
 
-        res.cookie('jwt', token, { httpOnly: true, maxAge: 2 * 60 * 60 * 1000 });
+        res.cookie('jwt', token, { 
+            httpOnly: true, 
+            secure: true, 
+            sameSite: 'None', // Allows cross-origin requests
+            maxAge: 2 * 60 * 60 * 1000 
+        });
 
         res.status(201).json({
             userId: newUser._id, 
@@ -133,7 +138,12 @@ async function validateLogin(req, res) {
         }
 
         const token = createToken(user._id); // Ensure this is based on user._id
-        res.cookie('jwt', token, { httpOnly: true, maxAge: 2 * 60 * 60 * 1000 });
+        res.cookie('jwt', token, { 
+            httpOnly: true, 
+            secure: true, 
+            sameSite: 'None', // Allows cross-origin requests
+            maxAge: 2 * 60 * 60 * 1000 
+        });
         res.status(200).json({ 
             userId: user._id,
             user: user.userName 
