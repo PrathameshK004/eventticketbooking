@@ -1,21 +1,21 @@
+
 const express = require('express');
 const router = express.Router();
 const User = require('../modules/user.module.js');
 const jwt = require('jsonwebtoken');
-const ObjectId=require('mongoose').Types.ObjectId;
+const ObjectId = require('mongoose').Types.ObjectId;
 
 require('dotenv').config();
 
 module.exports = {
-    validateLogin: validateLogin,
-    getAllUsers: getAllUsers,
-    getUserById: getUserById,
-    createUser: createUser,
-    updateUser: updateUser,
-    deleteUser:deleteUser,
-    logoutUser:logoutUser
-}
-
+    validateLogin,
+    getAllUsers,
+    getUserById,
+    createUser,
+    updateUser,
+    deleteUser,
+    logoutUser
+};
 
 function getAllUsers(req, res) {
     User.find()
@@ -25,8 +25,6 @@ function getAllUsers(req, res) {
             res.status(500).json({ error: 'Failed to fetch users' });
         });
 }
-
-
 
 async function getUserById(req, res) {
     let userId = req.params.userId;
@@ -45,8 +43,8 @@ async function getUserById(req, res) {
     }
 }
 
-const createToken = (id) => {
-    return jwt.sign({ id }, process.env.JWTSecret, {
+const createToken = (key) => { // Update to key from id
+    return jwt.sign({ key }, process.env.JWTSecret, {
         expiresIn: 2 * 60 * 60
     });
 }
@@ -76,10 +74,8 @@ async function createUser(req, res) {
     }
 }
 
-
 async function updateUser(req, res) {
     const userId = req.params.userId; 
-
     const updatedUserData = req.body; 
     try {
         const user = await User.findById(userId); 
@@ -88,7 +84,6 @@ async function updateUser(req, res) {
             return res.status(404).json({ error: 'User not found' }); 
         }
 
-        
         user.userName = updatedUserData.userName || user.userName;
         user.mobileNo = updatedUserData.mobileNo || user.mobileNo;
         user.emailID = updatedUserData.emailID || user.emailID;
@@ -102,7 +97,6 @@ async function updateUser(req, res) {
         res.status(500).json({ error: 'Internal server error' });
     }
 }
-
 
 async function deleteUser(req, res) {
     const userId = req.params.userId; 
@@ -121,7 +115,6 @@ async function deleteUser(req, res) {
     }
 }
 
-
 async function validateLogin(req, res) {
     const { mobile_email, password } = req.body;
   
@@ -132,30 +125,27 @@ async function validateLogin(req, res) {
         let user;
 
         if (mobileRegex.test(mobile_email)) {
-   
             user = await User.loginWithMobile(mobile_email, password);
         } else if (emailRegex.test(mobile_email)) {
-          
             user = await User.loginWithEmail(mobile_email, password);
         } else {
             return res.status(400).json({ message: 'Invalid mobile number or email format' });
         }
 
-        const token = createToken(user._id);
+        const token = createToken(user._id); // Ensure this is based on user._id
         res.cookie('jwt', token, { httpOnly: true, maxAge: 2 * 60 * 60 * 1000 });
         res.status(200).json({ 
             userId: user._id,
             user: user.userName 
         });
-       
 
     } catch (err) {
         console.error("Login Error: ", err.message || err);
-
         res.status(400).json({ message: err.message || 'Invalid mobile number/email or password' });
     }
 }
 
 function logoutUser(req, res) {
-    res.cookie('jwt', '', { maxAge : 1 });
+    res.cookie('jwt', '', { httpOnly: true, maxAge: 0 }); // Clear cookie
+    res.status(200).json({ message: 'Successfully logged out' }); // Send success message
 }

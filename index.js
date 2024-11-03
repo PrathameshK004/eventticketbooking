@@ -20,14 +20,27 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(methodOverride('_method'));
 
 // CORS Configuration
+const allowedOrigins = [
+  'http://localhost:4200', // Frontend URL
+  'http://localhost:8100', 
+  'http://10.0.2.2:8100'
+  // Add more allowed origins as needed
+];
+
 app.use(cors({
-  origin: 'http://localhost:4200', // Make sure this matches your frontend URL
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl requests)
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['PUT', 'GET', 'POST', 'DELETE'],
   allowedHeaders: ['X-Requested-With', 'Content-Type', 'Origin', 'Accept', 'Authorization'],
   exposedHeaders: ['Authorization'],
   credentials: true // This allows credentials to be included
 }));
-
 
 // MongoDB Connection
 const mongoURI = process.env.CONNECTIONSTRING;
