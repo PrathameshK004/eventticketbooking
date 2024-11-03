@@ -21,11 +21,13 @@ app.use(methodOverride('_method'));
 
 // CORS Configuration
 app.use(cors({
-  origin: '*', // Set this as needed for security in production
-  methods: ['PUT', 'GET', 'POST', 'PATCH'],
+  origin: 'http://localhost:4200', // Make sure this matches your frontend URL
+  methods: ['PUT', 'GET', 'POST', 'DELETE'],
   allowedHeaders: ['X-Requested-With', 'Content-Type', 'Origin', 'Accept', 'Authorization'],
-  exposedHeaders: ['Authorization']
+  exposedHeaders: ['Authorization'],
+  credentials: true // This allows credentials to be included
 }));
+
 
 // MongoDB Connection
 const mongoURI = process.env.CONNECTIONSTRING;
