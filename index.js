@@ -23,7 +23,8 @@ app.use(methodOverride('_method'));
 app.use(cors({
   origin: '*', // Set this as needed for security in production
   methods: ['PUT', 'GET', 'POST', 'PATCH'],
-  allowedHeaders: ['X-Requested-With', 'Content-Type', 'Origin', 'Accept', 'Authorization']
+  allowedHeaders: ['X-Requested-With', 'Content-Type', 'Origin', 'Accept', 'Authorization'],
+  exposedHeaders: ['Authorization']
 }));
 
 // MongoDB Connection
