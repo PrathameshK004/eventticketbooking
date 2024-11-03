@@ -156,6 +156,11 @@ async function validateLogin(req, res) {
 }
 
 function logoutUser(req, res) {
-    res.cookie('jwt', '', { httpOnly: true, maxAge: 0 }); // Clear cookie
+    res.cookie('jwt', '', { 
+        httpOnly: true, 
+        secure: true,
+        sameSite: None,
+        maxAge: 0 
+    }); 
     res.status(200).json({ message: 'Successfully logged out' }); // Send success message
 }
