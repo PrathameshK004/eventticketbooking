@@ -23,7 +23,8 @@ app.use(methodOverride('_method'));
 const allowedOrigins = [
   'http://localhost:4200', // Frontend URL
   'http://localhost:8100', 
-  'http://10.0.2.2:8100'
+  'http://10.0.2.2:8100',
+  'https://eventticketbookingdashboard.web.app'
   // Add more allowed origins as needed
 ];
 

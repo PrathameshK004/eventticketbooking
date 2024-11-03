@@ -58,7 +58,7 @@ async function createUser(req, res) {
         res.cookie('jwt', token, { 
             httpOnly: true, 
             secure: true, 
-            sameSite: 'None', // Allows cross-origin requests
+            sameSite: 'None', 
             maxAge: 2 * 60 * 60 * 1000 
         });
 
