@@ -7,7 +7,7 @@ const bookingDetailsSchema = new mongoose.Schema({
     userId: { type: String },
     eventId: { type: String }, 
     bookedBy: { type: String },
-    userEmail: { type: String },  // Email field
+    userEmail: { type: String },
     eventTitle: { type: String },
     eventDate: { type: Date },
     bookingDate: { type: Date, default: Date.now },
