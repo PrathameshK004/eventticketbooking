@@ -11,7 +11,7 @@ router.get('/checkAuth', verifyToken, (req, res) => {
 router.get('/logout', usersController.logoutUser);
 router.get('/:userId', verifyToken, userInterceptor.validateUserId, usersController.getUserById);
 router.post('/login', userInterceptor.checkLogin, usersController.validateLogin);
-router.post('/addUser', userInterceptor.validateNewUser,usersController.createUser);
+router.post('/addUser', userInterceptor.validateNewUser, usersController.createUser);
 router.put('/:userId', verifyToken, userInterceptor.validateUserId, userInterceptor.validateUpdateUser, usersController.updateUser);
 router.delete('/:userId', verifyToken, userInterceptor.validateUserId,usersController.deleteUser)
 module.exports = router;

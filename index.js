@@ -19,14 +19,30 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(methodOverride('_method'));
 
+// CORS Configuration
+const allowedOrigins = [
+  'http://localhost:4200', 
+  'http://localhost:8100', 
+  'http://localhost/',
+  'https://eventticketbookingdashboard.web.app'
+  
+];
 
 app.use(cors({
-  origin: '*',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl requests)
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['PUT', 'GET', 'POST', 'DELETE'],
   allowedHeaders: ['X-Requested-With', 'Content-Type', 'Origin', 'Accept', 'Authorization'],
   exposedHeaders: ['Authorization'],
-  credentials: true 
+  credentials: true // This allows credentials to be included
 }));
+
 
 // MongoDB Connection
 const mongoURI = process.env.CONNECTIONSTRING;
