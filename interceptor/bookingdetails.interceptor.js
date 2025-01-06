@@ -48,10 +48,20 @@ async function validateUserId(req, res, next) {
 }
 
 async function validateNewBooking(req, res, next) {
-    const { userId, eventId, eventTitle, bookingDate, eventDate, noOfPeople, totalAmount, status, nameOfPeople } = req.body;
+    const { 
+        userId, 
+        eventId, 
+        customer_name, 
+        eventTitle, 
+        bookingDate, 
+        eventDate, 
+        totalAmount, 
+        pay_status, 
+        book_status 
+    } = req.body;
 
-    if (!userId || !eventId || !noOfPeople || !totalAmount || !nameOfPeople) {
-        return res.status(400).json({ error: 'User ID, Event ID, Number of people, Total amount, and Names of people are required fields.' });
+    if (!userId || !eventId || !totalAmount || !pay_status) {
+        return res.status(400).json({ error: 'User ID, Event ID, Total amount, Payment status, and Booking status are required fields.' });
     }
     
     if (typeof userId !== 'string' || !isUuidValid(userId)) {
@@ -67,17 +77,12 @@ async function validateNewBooking(req, res, next) {
         return res.status(500).json({ error: 'An error occurred while validating the user ID. ' + error });
     }
 
-    if (!Number.isInteger(noOfPeople) || noOfPeople < 1) {
-        return res.status(400).json({ error: 'Number of people must be a positive integer.' });
-    }
-
     if (typeof totalAmount !== 'number' || totalAmount < 0) {
         return res.status(400).json({ error: 'Total amount must be a non-negative number.' });
     }
 
-    // Validate nameOfPeople array length
-    if (!Array.isArray(nameOfPeople) || nameOfPeople.length !== noOfPeople) {
-        return res.status(400).json({ error: `The number of names provided (${nameOfPeople.length}) does not match the number of people (${noOfPeople}).` });
+    if (!['Successful'].includes(pay_status)) {
+        return res.status(400).json({ error: `Payment is not Success.` });
     }
 
     next();
@@ -85,14 +90,14 @@ async function validateNewBooking(req, res, next) {
 
 async function validateUpdateBooking(req, res, next) {
     const { bookingId } = req.params;
-    const { status } = req.body;
+    const { book_status } = req.body;
 
     if (!isUuidValid(bookingId)) {
         return res.status(400).json({ error: 'Invalid booking ID. Please provide a valid UUID.' });
     }
 
-    if (!status || !['Booked', 'Cancelled', 'Completed'].includes(status)) {
-        return res.status(400).json({ error: 'Status is required and must be either Booked, Cancelled, or Completed.' });
+    if (!book_status || !['Booked', 'Cancelled', 'Completed'].includes(book_status)) {
+        return res.status(400).json({ error: 'Booking status is required and must be either Booked, Cancelled, or Completed.' });
     }
 
     try {
@@ -101,8 +106,8 @@ async function validateUpdateBooking(req, res, next) {
             return res.status(404).json({ error: 'Booking not found.' });
         }
 
-        if (status === existingBooking.status) {
-            return res.status(400).json({ error: 'New status must be different from the current status.' });
+        if (book_status === existingBooking.book_status) {
+            return res.status(400).json({ error: 'New booking status must be different from the current status.' });
         }
 
         next();
@@ -126,6 +131,3 @@ async function validateEventId(req, res, next) {
         res.status(500).json({ error: 'An error occurred while validating the event ID. ' + error });
     }
 }
-
-
-

@@ -4,17 +4,19 @@ const Event = require('../modules/event.module');
 const User = require('../modules/user.module');  // Import the User model
 
 const bookingDetailsSchema = new mongoose.Schema({
-    userId: { type: String },
-    eventId: { type: String }, 
-    bookedBy: { type: String },
-    userEmail: { type: String },
+    userId: { type: String },//*
+    eventId: { type: String }, //*
+    customer_name: { type: String },
     eventTitle: { type: String },
     eventDate: { type: Date },
     bookingDate: { type: Date, default: Date.now },
-    noOfPeople: { type: Number },
-    nameOfPeople: { type: [String] },
-    totalAmount: { type: Number },
-    status: { 
+    noOfPeople: { type: Number }, //*
+    totalAmount: { type: Number }, //*
+    pay_status: { 
+        type: String, 
+        enum: ['Successful']
+    }, //*
+    book_status: { 
         type: String, 
         enum: ['Booked', 'Cancelled', 'Completed'], 
         default: 'Booked' 
@@ -36,8 +38,7 @@ bookingDetailsSchema.pre('save', async function (next) {
     if (this.isModified('userId')) {
         const user = await User.findById(this.userId);
         if (user) {
-            this.bookedBy = user.userName;  // Set bookedBy with the user's name
-            this.userEmail = user.emailID;     // Set userEmail with the user's email
+            this.customer_name = user.userName;  // Set bookedBy with the user's name
         } else {
             return next(new Error('User not found'));
         }
