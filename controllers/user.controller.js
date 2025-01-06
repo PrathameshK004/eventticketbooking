@@ -53,14 +53,7 @@ async function createUser(req, res) {
     try {
         const newUser = await User.create(req.body);
 
-        const token = createToken(newUser._id);
-
-        res.cookie('jwt', token, { 
-            httpOnly: true, 
-            secure: true, 
-            sameSite: 'None', 
-            maxAge: 2 * 60 * 60 * 1000 
-        });
+       
 
         res.status(201).json({
             userId: newUser._id, 
