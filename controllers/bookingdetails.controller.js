@@ -80,7 +80,7 @@ async function createBooking(req, res) {
 
 async function updateBooking(req, res) {
     const bookingId = req.params.bookingId;
-    const updatedStatus = req.body.status; // Only update status
+    const updatedStatus = req.body.book_status; // Only update status
 
     try {
         const booking = await Booking.findById(bookingId);
@@ -90,17 +90,17 @@ async function updateBooking(req, res) {
         }
 
         // Prevent changing from "Cancelled" or "Completed" back to "Booked"
-        if ((booking.status === 'Cancelled' || booking.status === 'Completed') && updatedStatus === 'Booked') {
+        if ((booking.book_status === 'Cancelled' || booking.book_status === 'Completed') && updatedStatus === 'Booked') {
             return res.status(400).json({ error: 'Cancelled or completed bookings cannot be rebooked' });
         }
 
         // Allow cancellation only if the current status is "Booked"
-        if (updatedStatus === 'Cancelled' && booking.status !== 'Booked') {
+        if (updatedStatus === 'Cancelled' && booking.book_status !== 'Booked') {
             return res.status(400).json({ error: 'Only "Booked" bookings can be cancelled' });
         }
 
         // Update only if status is being changed
-        if (updatedStatus && updatedStatus !== booking.status) {
+        if (updatedStatus && updatedStatus !== booking.book_status) {
             if (updatedStatus === 'Cancelled') {
                 const event = await Event.findById(booking.eventId);
                 if (event) {
@@ -112,7 +112,7 @@ async function updateBooking(req, res) {
             }
 
             // Update the booking status
-            booking.status = updatedStatus;
+            booking.book_status = updatedStatus;
         }
 
         await booking.save(); // Save the booking with the updated status
