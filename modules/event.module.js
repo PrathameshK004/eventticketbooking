@@ -28,11 +28,11 @@ const eventSchema = new mongoose.Schema({
   
 
 // Override toJSON method to format the eventDate when sending data out
-eventSchema.methods.toJSON = function() {
-    const event = this.toObject();
-    event.eventDate = event.eventDate.toISOString().split('T')[0]; // Format date as YYYY-MM-DD
-    return event;
-};
+// eventSchema.methods.toJSON = function() {
+//     const event = this.toObject();
+//     event.eventDate = event.eventDate.toISOString().split('T')[0]; // Format date as YYYY-MM-DD
+//     return event;
+// };
 
 const Event = mongoose.model('Event', eventSchema);
 
