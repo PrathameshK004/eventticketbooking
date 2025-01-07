@@ -6,12 +6,18 @@ const Event = require('../modules/event.module.js');
 cron.schedule('* * * * *', async () => {
     try {
         const currentDate = new Date();
-        const IST_OFFSET = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
-        const currentDateIST = new Date(currentDate.getTime() + IST_OFFSET); // Current time in IST
         
+        // Get midnight of today in UTC (as base time)
+        const formattedDate = new Date(currentDate);
+        formattedDate.setHours(0, 0, 0, 0); // Set to today's midnight (00:00:00)
+        
+        // Apply IST offset (UTC + 5:30)
+        const IST_OFFSET = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
+        const istMidnight = new Date(formattedDate.getTime() + IST_OFFSET); // Today's midnight in IST
+
         // Step 1: Update bookings that are past the current date and have 'Booked' status
         const bookingsToUpdate = await Booking.find({
-            eventDate: { $lt: currentDateIST }, // Compare with current time in IST
+            eventDate: { $lt: istMidnight }, // Only those before today's midnight (00:00:00 IST)
             status: 'Booked' // Only get bookings with status 'Booked'
         });
 
@@ -20,9 +26,9 @@ cron.schedule('* * * * *', async () => {
             await booking.save();
         }
 
-        // Step 2: Delete events that are past the current date (before the current time in IST)
+        // Step 2: Delete events that are before today's midnight (00:00:00 IST)
         const eventsToDelete = await Event.find({
-            eventDate: { $lt: currentDateIST } // Compare with current time in IST
+            eventDate: { $lt: istMidnight } // Only events that occurred before today's midnight (00:00:00 IST)
         });
 
         if (eventsToDelete.length > 0) {
