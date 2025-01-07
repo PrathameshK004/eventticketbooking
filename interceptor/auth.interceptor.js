@@ -25,6 +25,7 @@ const verifyToken = async (req, res, next) => {
             }
 
             req.userKey = user.userName; // Set the username from the user object
+             req.userId = user._id;
             next(); // Call the next middleware or route handler
         } catch (err) {
             console.error("Internal server error:", err.message);
