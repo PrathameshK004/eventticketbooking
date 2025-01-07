@@ -14,13 +14,13 @@ module.exports = {
 }
 
 function getAllEvents(req, res) {
-    const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
-    const limit = parseInt(req.query.limit) || 4; // Default to 4 events per page
-    const skip = (page - 1) * limit; // Calculate how many documents to skip
+    //const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
+    //const limit = parseInt(req.query.limit) || 4; // Default to 4 events per page
+    //const skip = (page - 1) * limit; // Calculate how many documents to skip
 
     Event.find()
-        .skip(skip) // Skip documents according to the page
-        .limit(limit) // Limit the number of documents returned
+        //.skip(skip) // Skip documents according to the page
+       // .limit(limit) // Limit the number of documents returned
         .then(events => res.status(200).json(events))
         .catch(err => {
             console.error(err.message);
