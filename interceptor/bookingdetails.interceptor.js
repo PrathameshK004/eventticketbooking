@@ -60,10 +60,12 @@ async function validateNewBooking(req, res, next) {
         book_status 
     } = req.body;
 
+    // Check for required fields
     if (!userId || !eventId || !totalAmount || !pay_status) {
         return res.status(400).json({ error: 'User ID, Event ID, Total amount, Payment status, and Booking status are required fields.' });
     }
     
+    // Validate UUID for userId
     if (typeof userId !== 'string' || !isUuidValid(userId)) {
         return res.status(400).json({ error: 'User ID must be a valid UUID string.' });
     }
@@ -77,16 +79,24 @@ async function validateNewBooking(req, res, next) {
         return res.status(500).json({ error: 'An error occurred while validating the user ID. ' + error });
     }
 
+    // Validate totalAmount
     if (typeof totalAmount !== 'number' || totalAmount < 0) {
         return res.status(400).json({ error: 'Total amount must be a non-negative number.' });
     }
 
+    // Validate pay_status
     if (!['Successful'].includes(pay_status)) {
-        return res.status(400).json({ error: `Payment is not Success.` });
+        return res.status(400).json({ error: `Payment is not Successful.` });
+    }
+
+    // Validate bookingDate and eventDate
+    if (new Date(bookingDate) > new Date(eventDate)) {
+        return res.status(400).json({ error: 'Booking date must be earlier than the event date.' });
     }
 
     next();
 }
+
 
 async function validateUpdateBooking(req, res, next) {
     const { bookingId } = req.params;
