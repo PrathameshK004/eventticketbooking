@@ -24,8 +24,7 @@ const verifyToken = async (req, res, next) => {
                 return res.status(404).json({ message: "User not found" });
             }
 
-            req.userKey = user.userName; // Set the username from the user object
-             req.userId = user._id;
+            req.userKey = user._id; // Set the username from the user object
             next(); // Call the next middleware or route handler
         } catch (err) {
             console.error("Internal server error:", err.message);
