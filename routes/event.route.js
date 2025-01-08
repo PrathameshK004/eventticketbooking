@@ -34,7 +34,7 @@ router.post(
   eventInterceptor.validateNewEvent,
   eventController.createEvent
 );
-router.put('/:eventId', eventInterceptor.validateUpdateEvent, eventController.updateEvent);
+router.put('/:eventId', upload.single('file'), eventInterceptor.validateUpdateEvent, eventController.updateEvent);
 router.delete('/:eventId', eventInterceptor.validateEventId, eventController.deleteEvent);
 
 module.exports = router;
