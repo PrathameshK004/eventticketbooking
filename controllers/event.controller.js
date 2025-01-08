@@ -52,6 +52,7 @@ async function getEventById(req, res) {
 }
 
 // Create a new event with file upload
+// Create a new event with file upload
 async function createEvent(req, res) {
     console.log('Received request body:', req.body);
     console.log('Received file:', req.file);
@@ -111,8 +112,10 @@ async function createEvent(req, res) {
                     contentType: req.file.mimetype,
                 });
 
+                // Write the file buffer to the stream
                 uploadStream.end(req.file.buffer);
 
+                // Handle the finish event when the file upload is complete
                 uploadStream.on('finish', (file) => {
                     console.log('File uploaded successfully:', file);
 
@@ -141,7 +144,7 @@ async function createEvent(req, res) {
                 });
 
                 uploadStream.on('error', (err) => {
-                    console.error('File upload failed:', err);  // Log error details
+                    console.error('File upload failed:', err);
                     res.status(500).json({ error: 'File upload failed', details: err.message });
                 });
 
@@ -159,6 +162,7 @@ async function createEvent(req, res) {
         res.status(500).json({ error: 'Failed to create event', details: error.message });
     }
 }
+
 
 // Update event
 async function updateEvent(req, res) {
