@@ -133,7 +133,7 @@ async function createEvent(req, res) {
                     fileId = fileMetadata._id;
 
                     // Construct image URL based on the file _id
-                    imageUrl = `/api/events/image/${fileId}`;
+                    imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
 
                     // Update the event document with the fileId and imageUrl
                     newEvent.fileId = fileId;
