@@ -6,6 +6,7 @@ const path = require('path');
 const methodOverride = require('method-override');
 const indexRouter = require('./routes/index');
 const retrieveRoutes = require('./routes/retrieve.route');
+const uploadRoutes = require('./routes/upload.route');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
@@ -53,6 +54,7 @@ mongoose.connect(mongoURI, {
   .catch(err => console.error('MongoDB connection error:', err));
 
 app.use('/file/retrieve', retrieveRoutes);
+app.use('/file/upload', uploadRoutes);
 app.use('/api', indexRouter);
 
 // Cache-Control Middleware
