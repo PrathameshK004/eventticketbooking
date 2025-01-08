@@ -60,9 +60,14 @@ async function createEvent(req, res) {
         let fileId = null;
         let imageUrl = null;
 
-        
+        // Directly use eventFeatures and eventTags as arrays from the request body
         let eventFeatures = req.body.eventFeatures || [];
         let eventTags = req.body.eventTags || [];
+
+        // Ensure that eventFeatures and eventTags are arrays
+        if (!Array.isArray(eventFeatures) || !Array.isArray(eventTags)) {
+            return res.status(400).json({ error: 'Event features or tags must be valid JSON arrays' });
+        }
 
         // Create a new event object
         const eventDetails = {
@@ -76,8 +81,8 @@ async function createEvent(req, res) {
             eventRating: req.body.eventRating ? parseFloat(req.body.eventRating) : undefined,
             eventCapacity: parseInt(req.body.eventCapacity),
             eventDuration: req.body.eventDuration,
-            eventFeatures: eventFeatures, // Use parsed eventFeatures array
-            eventTags: eventTags, // Use parsed eventTags array
+            eventFeatures: eventFeatures,  // Directly use eventFeatures array
+            eventTags: eventTags,  // Directly use eventTags array
             eventOrgInsta: req.body.eventOrgInsta,
             eventOrgX: req.body.eventOrgX,
             eventOrgFacebook: req.body.eventOrgFacebook
@@ -85,6 +90,11 @@ async function createEvent(req, res) {
 
         // Save the new event to the database
         const newEvent = await Event.create(eventDetails);
+
+        // Check if the event was saved successfully
+        if (!newEvent) {
+            return res.status(500).json({ error: 'Failed to create event, no event created.' });
+        }
 
         // Handle file upload if a file is present
         if (req.file) {
@@ -121,6 +131,8 @@ async function createEvent(req, res) {
         res.status(500).json({ error: 'Failed to create event', details: error.message });
     }
 }
+
+
 
 // Update event
 async function updateEvent(req, res) {
