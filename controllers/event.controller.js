@@ -21,8 +21,7 @@ module.exports = {
     getEventById,
     createEvent,
     updateEvent,
-    deleteEvent,
-    searchEventsByKeyword
+    deleteEvent
 };
 
 // Get all events
