@@ -54,9 +54,6 @@ async function getEventById(req, res) {
 // Create a new event with file upload
 // Create a new event with file upload
 async function createEvent(req, res) {
-    console.log('Received request body:', req.body);
-    console.log('Received file:', req.file);
-
     try {
         let fileId = null;
         let imageUrl = null;
@@ -82,8 +79,8 @@ async function createEvent(req, res) {
             eventRating: req.body.eventRating ? parseFloat(req.body.eventRating) : undefined,
             eventCapacity: parseInt(req.body.eventCapacity),
             eventDuration: req.body.eventDuration,
-            eventFeatures: eventFeatures,
-            eventTags: eventTags,
+            eventFeatures: eventFeatures,  // Directly use eventFeatures array
+            eventTags: eventTags,  // Directly use eventTags array
             eventOrgInsta: req.body.eventOrgInsta,
             eventOrgX: req.body.eventOrgX,
             eventOrgFacebook: req.body.eventOrgFacebook
@@ -92,76 +89,56 @@ async function createEvent(req, res) {
         // Save the new event to the database
         const newEvent = await Event.create(eventDetails);
 
-        // Check if the event was saved successfully
         if (!newEvent || !newEvent._id) {
-            return res.status(500).json({ error: 'Failed to create event, no event created or no _id assigned.' });
+            return res.status(500).json({ error: 'Failed to create event' });
         }
-
-        console.log('Event created successfully:', newEvent);
 
         // Handle file upload if a file is present
         if (req.file) {
             const fileExtension = path.extname(req.file.originalname);
-            const newFileName = `${newEvent._id}${fileExtension}`;
+            const newFileName = `${newEvent._id}${fileExtension}`; // Naming the file with the eventId
 
-            console.log('Uploading file with name:', newFileName);
+            // Upload the file to GridFS
+            const uploadStream = bucket.openUploadStream(newFileName, {
+                contentType: req.file.mimetype,
+            });
+            uploadStream.end(req.file.buffer);
 
-            try {
-                // Upload the file to GridFS
-                const uploadStream = bucket.openUploadStream(newFileName, {
-                    contentType: req.file.mimetype,
-                });
+            // On file upload success, get the file's _id
+            uploadStream.on('finish', async (file) => {
+                console.log('File uploaded successfully:', file);
 
-                // Write the file buffer to the stream
-                uploadStream.end(req.file.buffer);
+                if (file && file._id) {
+                    fileId = file._id;  // MongoDB-generated unique file ID
+                    imageUrl = `/api/events/image/${fileId}`;  // URL or path to the file
 
-                // Handle the finish event when the file upload is complete
-                uploadStream.on('finish', (file) => {
-                    console.log('File uploaded successfully:', file);
+                    // Update event with fileId and imageUrl
+                    newEvent.fileId = fileId;
+                    newEvent.imageUrl = imageUrl;
 
-                    if (file && file._id) {
-                        fileId = file._id;
-                        imageUrl = `/api/events/image/${fileId}`;
+                    // Save event with file details
+                    await newEvent.save();
+                    res.status(201).json(newEvent);  // Respond with updated event
+                } else {
+                    console.error('Upload failed: Missing file._id');
+                    res.status(500).json({ error: 'File upload failed, _id missing from upload result.' });
+                }
+            });
 
-                        // Update the event with file ID and image URL
-                        newEvent.fileId = fileId;
-                        newEvent.imageUrl = imageUrl;
-
-                        // Save the updated event with file details
-                        newEvent.save()
-                            .then(() => {
-                                console.log('Event updated with file details');
-                                res.status(201).json(newEvent);
-                            })
-                            .catch((err) => {
-                                console.error('Error saving event with file:', err);
-                                res.status(500).json({ error: 'Error saving event with file' });
-                            });
-                    } else {
-                        console.error('Upload failed: Missing file._id');
-                        res.status(500).json({ error: 'File upload failed, _id missing from upload result.' });
-                    }
-                });
-
-                uploadStream.on('error', (err) => {
-                    console.error('File upload failed:', err);
-                    res.status(500).json({ error: 'File upload failed', details: err.message });
-                });
-
-            } catch (err) {
-                console.error('Error during file upload:', err);
-                res.status(500).json({ error: 'Error during file upload', details: err.message });
-            }
+            // Handle upload failure
+            uploadStream.on('error', (err) => {
+                console.error('Upload failed:', err);
+                res.status(500).json({ error: 'File upload failed.' });
+            });
+        } else {
+            res.status(201).json(newEvent);
         }
     } catch (error) {
         console.error('Error creating event:', error);
-        if (error.name === 'ValidationError') {
-            const errors = Object.values(error.errors).map(err => err.message);
-            return res.status(400).json({ errors });
-        }
         res.status(500).json({ error: 'Failed to create event', details: error.message });
     }
 }
+
 
 
 // Update event
