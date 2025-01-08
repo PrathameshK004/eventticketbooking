@@ -76,40 +76,55 @@ async function createEvent(req, res) {
         eventRating: req.body.eventRating ? parseFloat(req.body.eventRating) : undefined,
         eventCapacity: parseInt(req.body.eventCapacity),
         eventDuration: req.body.eventDuration,
-        eventFeatures: eventFeatures,  // Ensure it's an array
-        eventTags: eventTags,  // Ensure it's an array
+        eventFeatures: eventFeatures,
+        eventTags: eventTags,
         eventOrgInsta: req.body.eventOrgInsta,
         eventOrgX: req.body.eventOrgX,
         eventOrgFacebook: req.body.eventOrgFacebook
       };
   
-      // Save the new event to the database
       const newEvent = await Event.create(eventDetails);
+  
+      if (!newEvent) {
+        console.error('Event creation failed');
+        return res.status(500).json({ error: 'Failed to create event' });
+      }
+  
+      console.log('Event created successfully:', newEvent);
   
       // Handle file upload if a file is present
       if (req.file) {
         const fileExtension = path.extname(req.file.originalname);
         const newFileName = `${newEvent._id}${fileExtension}`;
-  
+    
         const uploadResult = await new Promise((resolve, reject) => {
-          const uploadStream = bucket.openUploadStream(newFileName, {
-            contentType: req.file.mimetype,
-          });
-          uploadStream.end(req.file.buffer);
-  
-          uploadStream.on('finish', (file) => resolve(file));
-          uploadStream.on('error', (err) => reject(err));
+            const uploadStream = bucket.openUploadStream(newFileName, {
+                contentType: req.file.mimetype,
+            });
+            uploadStream.end(req.file.buffer);
+    
+            uploadStream.on('finish', (file) => {
+                console.log('File uploaded successfully:', file); // Log file object to inspect
+                resolve(file); // file should contain _id and other metadata
+            });
+    
+            uploadStream.on('error', (err) => reject(err));
         });
-  
-        console.log('File uploaded successfully:', uploadResult);
-        fileId = uploadResult._id;
-        imageUrl = `/api/events/image/${fileId}`;
-  
-        // Update the event with the file ID and image URL
-        newEvent.fileId = fileId;
-        newEvent.imageUrl = imageUrl;
-        await newEvent.save();
-      }
+    
+        if (uploadResult && uploadResult._id) {
+            fileId = uploadResult._id;
+            imageUrl = `/api/events/image/${fileId}`;
+    
+            // Update the event with the file ID and image URL
+            newEvent.fileId = fileId;
+            newEvent.imageUrl = imageUrl;
+            await newEvent.save();
+        } else {
+            console.error('Upload result does not contain _id:', uploadResult);
+            return res.status(500).json({ error: 'File upload failed, no file _id received' });
+        }
+    }
+    
   
       res.status(201).json(newEvent);
     } catch (error) {
