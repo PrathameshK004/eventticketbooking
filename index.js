@@ -53,14 +53,7 @@ mongoose.connect(mongoURI, {
   .then(() => console.log('MongoDB connected successfully.'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Serve Frontend at /file
-app.get('/file', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
 
-// Routes
-app.use('/file/upload', uploadRoutes);
-app.use('/file/retrieve', retrieveRoutes);
 app.use('/api', indexRouter);
 
 // Cache-Control Middleware

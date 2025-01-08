@@ -26,7 +26,6 @@ const upload = multer({
 });
 
 // Define routes
-router.get('/searchEvents', eventController.searchEventsByKeyword);
 router.get('/allEvents', eventController.getAllEvents);
 router.get('/:eventId', eventInterceptor.validateEventId, eventController.getEventById);
 router.post(

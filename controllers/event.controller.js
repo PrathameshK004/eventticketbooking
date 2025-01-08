@@ -217,29 +217,3 @@ async function deleteEvent(req, res) {
     }
 }
 
-// Search events by keyword
-async function searchEventsByKeyword(req, res) {
-    try {
-        const keyword = req.query.q;
-
-        if (!keyword) {
-            return res.status(400).json({ error: 'Please provide a keyword to search for.' });
-        }
-
-        const events = await Event.find({
-            $or: [
-                { eventTitle: { $regex: keyword, $options: 'i' } },
-                { eventAddress: { $regex: keyword, $options: 'i' } },
-                { eventOrganizer: { $regex: keyword, $options: 'i' } },
-            ],
-        });
-
-        if (events.length === 0) {
-            return res.status(404).json({ message: 'No events found matching the keyword.' });
-        }
-
-        res.status(200).json(events);
-    } catch (error) {
-        res.status(500).json({ error: 'Error occurred while searching for events.' });
-    }
-}
