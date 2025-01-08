@@ -5,6 +5,8 @@ const ObjectId = require('mongoose').Types.ObjectId;
 const { GridFSBucket } = require('mongodb');
 const mongoose = require('mongoose');
 const path = require('path');
+const { MongoClient } = require('mongodb');
+const client = new MongoClient(process.env.CONNECTIONSTRING);
 
 // Initialize GridFSBucket
 let bucket;
@@ -51,7 +53,6 @@ async function getEventById(req, res) {
     }
 }
 
-// Create a new event with file upload
 // Create a new event with file upload
 async function createEvent(req, res) {
     try {
@@ -108,20 +109,48 @@ async function createEvent(req, res) {
             uploadStream.on('finish', async (file) => {
                 console.log('File uploaded successfully:', file);
 
-                if (file && file._id) {
-                    fileId = file._id;  // MongoDB-generated unique file ID
-                    imageUrl = `/api/events/image/${fileId}`;  // URL or path to the file
+                // Now that we have uploaded the file, retrieve its metadata
+                try {
+                    // Connect to MongoDB
+                    await client.connect();
+                    const db = client.db();  // Replace with your database name
+                    const filesCollection = db.collection('fs.files'); // The collection where GridFS stores file metadata
 
-                    // Update event with fileId and imageUrl
+                    // Query the fs.files collection to find the file by its filename
+                    const uploadedFile = await filesCollection.findOne({ filename: newFileName });
+
+                    // If no file found, return a 404 error
+                    if (!uploadedFile) {
+                        return res.status(404).json({ error: 'File not found.' });
+                    }
+
+                    // Send file metadata as a response
+                    const fileMetadata = {
+                        _id: uploadedFile._id,
+                        chunkSize: uploadedFile.chunkSize,
+                        contentType: uploadedFile.contentType,
+                        filename: uploadedFile.filename,
+                        length: uploadedFile.length,
+                        uploadDate: uploadedFile.uploadDate,
+                    };
+
+                    fileId = fileMetadata._id;
+
+                    // Construct image URL based on the file _id
+                    imageUrl = `/api/events/image/${fileId}`;
+
+                    // Update the event document with the fileId and imageUrl
                     newEvent.fileId = fileId;
                     newEvent.imageUrl = imageUrl;
-
-                    // Save event with file details
                     await newEvent.save();
-                    res.status(201).json(newEvent);  // Respond with updated event
-                } else {
-                    console.error('Upload failed: Missing file._id');
-                    res.status(500).json({ error: 'File upload failed, _id missing from upload result.' });
+
+                    // Respond with the created event and file details
+                    res.status(201).json({ event: newEvent, fileMetadata });
+                } catch (err) {
+                    console.error('Error retrieving file info:', err);
+                    res.status(500).json({ error: 'Error retrieving file info from the database.' });
+                } finally {
+                    await client.close(); // Close MongoDB connection after the operation
                 }
             });
 
@@ -131,6 +160,7 @@ async function createEvent(req, res) {
                 res.status(500).json({ error: 'File upload failed.' });
             });
         } else {
+            // If no file is uploaded, return the event without file info
             res.status(201).json(newEvent);
         }
     } catch (error) {
@@ -138,6 +168,7 @@ async function createEvent(req, res) {
         res.status(500).json({ error: 'Failed to create event', details: error.message });
     }
 }
+
 
 
 
