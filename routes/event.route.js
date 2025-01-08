@@ -3,18 +3,21 @@ const multer = require("multer");
 const router = express.Router();
 const eventController = require('../controllers/event.controller');
 const eventInterceptor = require('../interceptor/event.interceptor');
+const path = require('path');
 
 // Multer middleware for file uploads
+const storage = multer.memoryStorage();
 const upload = multer({
+  storage: storage,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB file size limit
   },
   fileFilter: (req, file, cb) => {
     const fileTypes = /jpeg|jpg|png|gif|mp4|mkv|avi|mov|wmv/;
-    const extname = fileTypes.test(file.mimetype);
-    const mimetype = fileTypes.test(file.originalname.split('.').pop().toLowerCase());
+    const extname = path.extname(file.originalname).toLowerCase();
+    const mimetype = file.mimetype;
 
-    if (extname && mimetype) {
+    if (fileTypes.test(extname) && fileTypes.test(mimetype)) {
       return cb(null, true);
     } else {
       return cb(new Error('Error: File type not allowed!'));
@@ -28,14 +31,7 @@ router.get('/allEvents', eventController.getAllEvents);
 router.get('/:eventId', eventInterceptor.validateEventId, eventController.getEventById);
 router.post(
   '/addEvent',
-  upload.single('file'), // Include multer middleware first
-  (req, res, next) => {
-    // Handle file upload errors
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-    next();
-  },
+  upload.single('file'),
   eventInterceptor.validateNewEvent,
   eventController.createEvent
 );
@@ -43,4 +39,3 @@ router.put('/:eventId', eventInterceptor.validateUpdateEvent, eventController.up
 router.delete('/:eventId', eventInterceptor.validateEventId, eventController.deleteEvent);
 
 module.exports = router;
-

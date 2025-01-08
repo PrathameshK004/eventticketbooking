@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Event = require('../modules/event.module.js');
-const ObjectId=require('mongoose').Types.ObjectId;
+const ObjectId = require('mongoose').Types.ObjectId;
 const { GridFSBucket } = require('mongodb');
 const mongoose = require('mongoose');
+const path = require('path');
 
 // Initialize GridFSBucket
 let bucket;
@@ -14,24 +15,17 @@ conn.once('open', () => {
 });
 
 module.exports = {
-    getAllEvents: getAllEvents,
-    getEventById: getEventById,
-    createEvent: createEvent,
-    updateEvent: updateEvent,
-    deleteEvent: deleteEvent,
-    searchEventsByKeyword: searchEventsByKeyword
+    getAllEvents,
+    getEventById,
+    createEvent,
+    updateEvent,
+    deleteEvent,
+    searchEventsByKeyword
 }
-
 
 // Get all events
 function getAllEvents(req, res) {
-    //const page = parseInt(req.query.page) || 1; // Default to page 1 if not provided
-    //const limit = parseInt(req.query.limit) || 4; // Default to 4 events per page
-    //const skip = (page - 1) * limit; // Calculate how many documents to skip
-
     Event.find()
-        //.skip(skip) // Skip documents according to the page
-       // .limit(limit) // Limit the number of documents returned
         .then(events => res.status(200).json(events))
         .catch(err => {
             console.error(err.message);
@@ -61,11 +55,25 @@ async function getEventById(req, res) {
 async function createEvent(req, res) {
     try {
         let fileId = null;
+        let imageUrl = null;
+
+        // Create a new event object
+        const eventDetails = {
+            ...req.body,
+            eventFeatures: JSON.parse(req.body.eventFeatures || '[]'),
+            eventTags: JSON.parse(req.body.eventTags || '[]')
+        };
+
+        // Save the new event to the database
+        const newEvent = await Event.create(eventDetails);
 
         // Handle file upload if a file is present
         if (req.file) {
+            const fileExtension = path.extname(req.file.originalname);
+            const newFileName = `${newEvent._id}${fileExtension}`;
+
             const uploadResult = await new Promise((resolve, reject) => {
-                const uploadStream = bucket.openUploadStream(req.file.originalname, {
+                const uploadStream = bucket.openUploadStream(newFileName, {
                     contentType: req.file.mimetype,
                 });
                 uploadStream.end(req.file.buffer);
@@ -75,23 +83,19 @@ async function createEvent(req, res) {
             });
 
             console.log('File uploaded successfully:', uploadResult);
-            fileId = uploadResult._id; // Store file ID for event
+            fileId = uploadResult._id;
+            imageUrl = `/api/events/image/${fileId}`;
+
+            // Update the event with the file ID and image URL
+            newEvent.fileId = fileId;
+            newEvent.imageUrl = imageUrl;
+            await newEvent.save();
         }
-
-        // Create a new event object with fileId
-        const eventDetails = {
-            ...req.body,
-            fileId, // Add fileId to event details
-        };
-
-        // Save the new event to the database
-        const newEvent = await Event.create(eventDetails);
 
         res.status(201).json(newEvent);
     } catch (error) {
         console.error('Error creating event:', error);
         if (error.name === 'ValidationError') {
-            // Handle Mongoose validation errors
             const errors = Object.values(error.errors).map(err => err.message);
             return res.status(400).json({ errors });
         }
@@ -130,6 +134,11 @@ async function deleteEvent(req, res) {
 
         if (!event) {
             return res.status(404).json({ error: 'Event not found' });
+        }
+
+        // If there's an associated file, delete it from GridFS
+        if (event.fileId) {
+            await bucket.delete(ObjectId(event.fileId));
         }
 
         return res.status(204).end();
