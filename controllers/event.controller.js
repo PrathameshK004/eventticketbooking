@@ -115,6 +115,10 @@ async function createEvent(req, res) {
                 uploadStream.on('error', (err) => reject(err));
             });
 
+            if (!uploadResult || !uploadResult._id) {
+                return res.status(500).json({ error: 'File upload failed' });
+            }
+
             console.log('File uploaded successfully:', uploadResult);
 
             // Assign fileId and imageUrl to the event
@@ -139,8 +143,6 @@ async function createEvent(req, res) {
         res.status(500).json({ error: 'Failed to create event', details: error.message });
     }
 }
-
-
 
 
 
