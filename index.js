@@ -5,8 +5,6 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const methodOverride = require('method-override');
 const indexRouter = require('./routes/index');
-const uploadRoutes = require('./routes/upload.route');
-const retrieveRoutes = require('./routes/retrieve.route');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
