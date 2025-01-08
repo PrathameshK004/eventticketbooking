@@ -1,38 +1,3 @@
-const express = require('express');
-const router = express.Router();
-const multer = require('multer');
-const mongoose = require('mongoose');
-const { GridFSBucket } = require('mongodb');
-require('dotenv').config();
-
-// MongoDB URI
-const mongoURI = process.env.CONNECTIONSTRING;
-const conn = mongoose.createConnection(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-
-// Initialize GridFSBucket
-let bucket;
-
-conn.once('open', () => {
-  bucket = new GridFSBucket(conn.db, { bucketName: 'uploads' });
-});
-
-// Multer middleware with file filter for images and videos
-const upload = multer({
-  fileFilter: (req, file, cb) => {
-    const fileTypes = /jpeg|jpg|png|gif|mp4|mkv|avi|mov|wmv/; // Define accepted file types
-    const extname = fileTypes.test(file.mimetype); // Check MIME type
-    const mimetype = fileTypes.test(file.originalname.split('.').pop().toLowerCase()); // Check extension
-
-    if (extname && mimetype) {
-      return cb(null, true); // Accept the file
-    } else {
-      cb(new Error('Error: File type not allowed!')); // Reject the file
-    }
-  },
-});
 
 // Upload route
 router.post('/', upload.single('file'), (req, res) => {
@@ -60,6 +25,5 @@ router.post('/', upload.single('file'), (req, res) => {
     });
   });
 
-  module.exports = router;
 
  
