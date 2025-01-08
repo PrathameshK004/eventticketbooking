@@ -23,21 +23,13 @@ const eventSchema = new mongoose.Schema({
             message: props => `${props.value} is not a valid duration format! Use "X hours" or "Y minutes".`
         }
     },
-    eventFeatures: [{ type: String, trim: true }],
-    eventTags: [{ type: String, trim: true }],
+    eventFeatures: [{ type: [String], trim: true }],
+    eventTags: [{ type: [String], trim: true }],
     eventOrgInsta: { type: String, trim: true },
     eventOrgX: { type: String, trim: true },
     eventOrgFacebook: { type: String, trim: true }
 });
 
-// Override toJSON method to format the eventDate when sending data out
-eventSchema.methods.toJSON = function() {
-    const event = this.toObject();
-    event.eventDate = event.eventDate.toISOString().split('T')[0]; // Format date as YYYY-MM-DD
-    return event;
-};
-
 const Event = mongoose.model('Event', eventSchema);
 
 module.exports = Event;
-
