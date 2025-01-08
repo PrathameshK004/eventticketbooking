@@ -6,6 +6,9 @@ const eventInterceptor = require('../interceptor/event.interceptor');
 
 // Multer middleware for file uploads
 const upload = multer({
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB file size limit
+  },
   fileFilter: (req, file, cb) => {
     const fileTypes = /jpeg|jpg|png|gif|mp4|mkv|avi|mov|wmv/;
     const extname = fileTypes.test(file.mimetype);
@@ -25,7 +28,14 @@ router.get('/allEvents', eventController.getAllEvents);
 router.get('/:eventId', eventInterceptor.validateEventId, eventController.getEventById);
 router.post(
   '/addEvent',
-  upload.single('file'), // Include multer middleware
+  upload.single('file'), // Include multer middleware first
+  (req, res, next) => {
+    // Handle file upload errors
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    next();
+  },
   eventInterceptor.validateNewEvent,
   eventController.createEvent
 );
@@ -33,3 +43,4 @@ router.put('/:eventId', eventInterceptor.validateUpdateEvent, eventController.up
 router.delete('/:eventId', eventInterceptor.validateEventId, eventController.deleteEvent);
 
 module.exports = router;
+

@@ -90,6 +90,11 @@ async function createEvent(req, res) {
         res.status(201).json(newEvent);
     } catch (error) {
         console.error('Error creating event:', error);
+        if (error.name === 'ValidationError') {
+            // Handle Mongoose validation errors
+            const errors = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({ errors });
+        }
         res.status(500).json({ error: 'Failed to create event' });
     }
 }
