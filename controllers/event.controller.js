@@ -114,7 +114,7 @@ async function createEvent(req, res) {
                     // Connect to MongoDB
                     await client.connect();
                     const db = client.db();  // Replace with your database name
-                    const filesCollection = db.collection('fs.files'); // The collection where GridFS stores file metadata
+                    const filesCollection = db.collection('uploads.files'); // The collection where GridFS stores file metadata
 
                     // Query the fs.files collection to find the file by its filename
                     const uploadedFile = await filesCollection.findOne({ filename: newFileName });
