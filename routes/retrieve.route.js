@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 const mongoose = require('mongoose');
 const { GridFSBucket } = require('mongodb');
 require('dotenv').config();
@@ -18,36 +17,38 @@ conn.once('open', () => {
   bucket = new GridFSBucket(conn.db, { bucketName: 'uploads' });
 });
 
-router.get('/:fileId', (req, res) => {
-    const fileId = req.params.fileId;
-  
-    // Find the file in GridFS using the filename
-    bucket.find({ fileId: fileId }).toArray((err, files) => {
-      if (!files || files.length === 0) {
-        return res.status(404).json({ error: 'File not found' });
-      }
-  
-      // Create a download stream
-      const downloadStream = bucket.openDownloadStreamByName(fileId);
-  
-      // Set headers for image response
-      res.set('Content-Type', files[0].contentType);
-      res.set('Content-Disposition', `inline; filename="${fileId}"`);
-  
-      // Pipe the image stream to the response
-      downloadStream.pipe(res);
-  
-      // Handle errors during streaming
-      downloadStream.on('error', (err) => {
-        console.error('Download error:', err);
-        res.status(500).json({ error: 'Error retrieving file.' });
-      });
+router.get('/:fileId', async (req, res) => {
+  const fileId = req.params.fileId;
+
+  try {
+    // Find the file metadata
+    const files = await bucket.find({ _id: mongoose.Types.ObjectId(fileId) }).toArray();
+    
+    if (!files || files.length === 0) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Create a download stream
+    const downloadStream = bucket.openDownloadStream(mongoose.Types.ObjectId(fileId));
+
+    // Set headers for image response
+    res.set('Content-Type', files[0].contentType);
+    res.set('Content-Disposition', `inline; filename="${files[0].filename}"`);
+
+    // Pipe the image stream to the response
+    downloadStream.pipe(res);
+
+    // Handle errors during streaming
+    downloadStream.on('error', (err) => {
+      console.error('Download error:', err);
+      res.status(500).json({ error: 'Error retrieving file.' });
     });
-  });
-  
-  
-  
-  
-  // Export the router
-  module.exports = router;
-  
+
+  } catch (err) {
+    console.error('Error in file retrieval:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Export the router
+module.exports = router;
