@@ -60,15 +60,9 @@ async function createEvent(req, res) {
         let fileId = null;
         let imageUrl = null;
 
-        // Parse the event features and tags as JSON arrays
-        let eventFeatures = [];
-        let eventTags = [];
-        try {
-            eventFeatures = JSON.parse(req.body.eventFeatures); // Parse JSON arrays
-            eventTags = JSON.parse(req.body.eventTags); // Parse JSON arrays
-        } catch (error) {
-            return res.status(400).json({ error: 'Invalid JSON in event features or tags' });
-        }
+        
+        let eventFeatures = req.body.eventFeatures || [];
+        let eventTags = req.body.eventTags || [];
 
         // Create a new event object
         const eventDetails = {
