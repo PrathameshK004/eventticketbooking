@@ -60,9 +60,15 @@ async function createEvent(req, res) {
       let fileId = null;
       let imageUrl = null;
   
-      // Parse the eventFeatures and eventTags as arrays
-      const eventFeatures = req.body.eventFeatures ? JSON.parse(req.body.eventFeatures) : [];
-      const eventTags = req.body.eventTags ? JSON.parse(req.body.eventTags) : [];
+      // Parse the event features and tags as JSON arrays
+      let eventFeatures = [];
+      let eventTags = [];
+      try {
+        eventFeatures = JSON.parse(req.body.eventFeatures);
+        eventTags = JSON.parse(req.body.eventTags);
+      } catch (error) {
+        return res.status(400).json({ error: 'Invalid JSON in event features or tags' });
+      }
   
       // Create a new event object
       const eventDetails = {
@@ -76,55 +82,40 @@ async function createEvent(req, res) {
         eventRating: req.body.eventRating ? parseFloat(req.body.eventRating) : undefined,
         eventCapacity: parseInt(req.body.eventCapacity),
         eventDuration: req.body.eventDuration,
-        eventFeatures: eventFeatures,
-        eventTags: eventTags,
+        eventFeatures: eventFeatures,  // Use parsed eventFeatures array
+        eventTags: eventTags,  // Use parsed eventTags array
         eventOrgInsta: req.body.eventOrgInsta,
         eventOrgX: req.body.eventOrgX,
         eventOrgFacebook: req.body.eventOrgFacebook
       };
   
+      // Save the new event to the database
       const newEvent = await Event.create(eventDetails);
-  
-      if (!newEvent) {
-        console.error('Event creation failed');
-        return res.status(500).json({ error: 'Failed to create event' });
-      }
-  
-      console.log('Event created successfully:', newEvent);
   
       // Handle file upload if a file is present
       if (req.file) {
         const fileExtension = path.extname(req.file.originalname);
         const newFileName = `${newEvent._id}${fileExtension}`;
-    
+  
         const uploadResult = await new Promise((resolve, reject) => {
-            const uploadStream = bucket.openUploadStream(newFileName, {
-                contentType: req.file.mimetype,
-            });
-            uploadStream.end(req.file.buffer);
-    
-            uploadStream.on('finish', (file) => {
-                console.log('File uploaded successfully:', file); // Log file object to inspect
-                resolve(file); // file should contain _id and other metadata
-            });
-    
-            uploadStream.on('error', (err) => reject(err));
+          const uploadStream = bucket.openUploadStream(newFileName, {
+            contentType: req.file.mimetype,
+          });
+          uploadStream.end(req.file.buffer);
+  
+          uploadStream.on('finish', (file) => resolve(file));
+          uploadStream.on('error', (err) => reject(err));
         });
-    
-        if (uploadResult && uploadResult._id) {
-            fileId = uploadResult._id;
-            imageUrl = `/api/events/image/${fileId}`;
-    
-            // Update the event with the file ID and image URL
-            newEvent.fileId = fileId;
-            newEvent.imageUrl = imageUrl;
-            await newEvent.save();
-        } else {
-            console.error('Upload result does not contain _id:', uploadResult);
-            return res.status(500).json({ error: 'File upload failed, no file _id received' });
-        }
-    }
-    
+  
+        console.log('File uploaded successfully:', uploadResult);
+        fileId = uploadResult._id;
+        imageUrl = `/api/events/image/${fileId}`;
+  
+        // Update the event with the file ID and image URL
+        newEvent.fileId = fileId;
+        newEvent.imageUrl = imageUrl;
+        await newEvent.save();
+      }
   
       res.status(201).json(newEvent);
     } catch (error) {
@@ -136,6 +127,7 @@ async function createEvent(req, res) {
       res.status(500).json({ error: 'Failed to create event', details: error.message });
     }
   }
+  
   
 
 // Update event
