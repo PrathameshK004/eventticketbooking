@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const Event = require('../modules/event.module.js');
-const ObjectId = require('mongoose').Types.ObjectId;
 const { GridFSBucket } = require('mongodb');
 const mongoose = require('mongoose');
 const path = require('path');
@@ -11,6 +10,7 @@ let bucket;
 
 const conn = mongoose.connection;
 conn.once('open', () => {
+    console.log("MongoDB connection established");
     bucket = new GridFSBucket(conn.db, { bucketName: 'uploads' });
 });
 
@@ -51,7 +51,6 @@ async function getEventById(req, res) {
     }
 }
 
-// Create a new event with file upload
 // Create a new event with file upload
 async function createEvent(req, res) {
     console.log('Received request body:', req.body);
@@ -111,26 +110,32 @@ async function createEvent(req, res) {
                 });
                 uploadStream.end(req.file.buffer);
 
-                uploadStream.on('finish', (file) => resolve(file));
-                uploadStream.on('error', (err) => reject(err));
+                uploadStream.on('finish', (file) => {
+                    console.log('File uploaded successfully:', file); // Debugging the file object
+                    resolve(file); // Return the file object on success
+                });
+
+                uploadStream.on('error', (err) => {
+                    console.error('File upload failed:', err); // Error handling
+                    reject(err); // Reject the promise on error
+                });
             });
 
-            if (!uploadResult || !uploadResult._id) {
-                return res.status(500).json({ error: 'File upload failed' });
+            // Ensure uploadResult contains _id
+            if (uploadResult && uploadResult._id) {
+                console.log('Upload result contains _id:', uploadResult._id); // Debugging
+                fileId = uploadResult._id;
+                imageUrl = `/api/events/image/${fileId}`;
+
+                // Update the event with the file ID and image URL
+                newEvent.fileId = fileId;
+                newEvent.imageUrl = imageUrl;
+
+                // Save the updated event with file details
+                await newEvent.save();
+            } else {
+                return res.status(500).json({ error: 'File upload failed, _id missing from upload result.' });
             }
-
-            console.log('File uploaded successfully:', uploadResult);
-
-            // Assign fileId and imageUrl to the event
-            fileId = uploadResult._id;
-            imageUrl = `/api/events/image/${fileId}`;
-
-            // Update the event with the file ID and image URL
-            newEvent.fileId = fileId;
-            newEvent.imageUrl = imageUrl;
-
-            // Save the updated event with file details
-            await newEvent.save();
         }
 
         res.status(201).json(newEvent);
@@ -143,8 +148,6 @@ async function createEvent(req, res) {
         res.status(500).json({ error: 'Failed to create event', details: error.message });
     }
 }
-
-
 
 // Update event
 async function updateEvent(req, res) {
