@@ -62,10 +62,7 @@ async function createEvent(req, res) {
         let eventFeatures = req.body.eventFeatures || [];
         let eventTags = req.body.eventTags || [];
 
-        // Ensure that eventFeatures and eventTags are arrays
-        if (!Array.isArray(eventFeatures) || !Array.isArray(eventTags)) {
-            return res.status(400).json({ error: 'Event features or tags must be valid JSON arrays' });
-        }
+      
 
         // Create a new event object
         const eventDetails = {

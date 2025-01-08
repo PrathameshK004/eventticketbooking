@@ -57,13 +57,7 @@ function validateEventData(eventData, isUpdate = false) {
     errors.push(`${eventData.eventDuration} is not a valid duration format! Use "X hours" or "Y minutes".`);
   }
 
-  if (eventData.eventFeatures && !Array.isArray(eventData.eventFeatures)) {
-    errors.push('Event features must be an array.');
-  }
 
-  if (eventData.eventTags && !Array.isArray(eventData.eventTags)) {
-    errors.push('Event tags must be an array.');
-  }
 
   if (eventData.eventDate && isDateInPast(eventData.eventDate)) {
     errors.push('Event date cannot be in the past.');
