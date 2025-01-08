@@ -19,20 +19,20 @@ conn.once('open', () => {
 });
 
 router.get('/:fileId', (req, res) => {
-    const fileName = req.params.filename;
+    const fileId = req.params.fileId;
   
     // Find the file in GridFS using the filename
-    bucket.find({ filename: fileName }).toArray((err, files) => {
+    bucket.find({ fileId: fileId }).toArray((err, files) => {
       if (!files || files.length === 0) {
         return res.status(404).json({ error: 'File not found' });
       }
   
       // Create a download stream
-      const downloadStream = bucket.openDownloadStreamByName(fileName);
+      const downloadStream = bucket.openDownloadStreamByName(fileId);
   
       // Set headers for image response
       res.set('Content-Type', files[0].contentType);
-      res.set('Content-Disposition', `inline; filename="${fileName}"`);
+      res.set('Content-Disposition', `inline; filename="${fileId}"`);
   
       // Pipe the image stream to the response
       downloadStream.pipe(res);
