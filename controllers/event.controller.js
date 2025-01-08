@@ -21,7 +21,7 @@ module.exports = {
     updateEvent,
     deleteEvent,
     searchEventsByKeyword
-}
+};
 
 // Get all events
 function getAllEvents(req, res) {
@@ -55,80 +55,78 @@ async function getEventById(req, res) {
 async function createEvent(req, res) {
     console.log('Received request body:', req.body);
     console.log('Received file:', req.file);
-  
+
     try {
-      let fileId = null;
-      let imageUrl = null;
-  
-      // Parse the event features and tags as JSON arrays
-      let eventFeatures = [];
-      let eventTags = [];
-      try {
-        eventFeatures = JSON.parse(req.body.eventFeatures);
-        eventTags = JSON.parse(req.body.eventTags);
-      } catch (error) {
-        return res.status(400).json({ error: 'Invalid JSON in event features or tags' });
-      }
-  
-      // Create a new event object
-      const eventDetails = {
-        eventTitle: req.body.eventTitle,
-        eventDate: new Date(req.body.eventDate),
-        eventAddress: req.body.eventAddress,
-        eventOrganizer: req.body.eventOrganizer,
-        eventPrice: parseFloat(req.body.eventPrice),
-        eventDescription: req.body.eventDescription,
-        eventLanguage: req.body.eventLanguage,
-        eventRating: req.body.eventRating ? parseFloat(req.body.eventRating) : undefined,
-        eventCapacity: parseInt(req.body.eventCapacity),
-        eventDuration: req.body.eventDuration,
-        eventFeatures: eventFeatures,  // Use parsed eventFeatures array
-        eventTags: eventTags,  // Use parsed eventTags array
-        eventOrgInsta: req.body.eventOrgInsta,
-        eventOrgX: req.body.eventOrgX,
-        eventOrgFacebook: req.body.eventOrgFacebook
-      };
-  
-      // Save the new event to the database
-      const newEvent = await Event.create(eventDetails);
-  
-      // Handle file upload if a file is present
-      if (req.file) {
-        const fileExtension = path.extname(req.file.originalname);
-        const newFileName = `${newEvent._id}${fileExtension}`;
-  
-        const uploadResult = await new Promise((resolve, reject) => {
-          const uploadStream = bucket.openUploadStream(newFileName, {
-            contentType: req.file.mimetype,
-          });
-          uploadStream.end(req.file.buffer);
-  
-          uploadStream.on('finish', (file) => resolve(file));
-          uploadStream.on('error', (err) => reject(err));
-        });
-  
-        console.log('File uploaded successfully:', uploadResult);
-        fileId = uploadResult._id;
-        imageUrl = `/api/events/image/${fileId}`;
-  
-        // Update the event with the file ID and image URL
-        newEvent.fileId = fileId;
-        newEvent.imageUrl = imageUrl;
-        await newEvent.save();
-      }
-  
-      res.status(201).json(newEvent);
+        let fileId = null;
+        let imageUrl = null;
+
+        // Parse the event features and tags as JSON arrays
+        let eventFeatures = [];
+        let eventTags = [];
+        try {
+            eventFeatures = JSON.parse(req.body.eventFeatures); // Parse JSON arrays
+            eventTags = JSON.parse(req.body.eventTags); // Parse JSON arrays
+        } catch (error) {
+            return res.status(400).json({ error: 'Invalid JSON in event features or tags' });
+        }
+
+        // Create a new event object
+        const eventDetails = {
+            eventTitle: req.body.eventTitle,
+            eventDate: new Date(req.body.eventDate),
+            eventAddress: req.body.eventAddress,
+            eventOrganizer: req.body.eventOrganizer,
+            eventPrice: parseFloat(req.body.eventPrice),
+            eventDescription: req.body.eventDescription,
+            eventLanguage: req.body.eventLanguage,
+            eventRating: req.body.eventRating ? parseFloat(req.body.eventRating) : undefined,
+            eventCapacity: parseInt(req.body.eventCapacity),
+            eventDuration: req.body.eventDuration,
+            eventFeatures: eventFeatures, // Use parsed eventFeatures array
+            eventTags: eventTags, // Use parsed eventTags array
+            eventOrgInsta: req.body.eventOrgInsta,
+            eventOrgX: req.body.eventOrgX,
+            eventOrgFacebook: req.body.eventOrgFacebook
+        };
+
+        // Save the new event to the database
+        const newEvent = await Event.create(eventDetails);
+
+        // Handle file upload if a file is present
+        if (req.file) {
+            const fileExtension = path.extname(req.file.originalname);
+            const newFileName = `${newEvent._id}${fileExtension}`;
+
+            const uploadResult = await new Promise((resolve, reject) => {
+                const uploadStream = bucket.openUploadStream(newFileName, {
+                    contentType: req.file.mimetype,
+                });
+                uploadStream.end(req.file.buffer);
+
+                uploadStream.on('finish', (file) => resolve(file));
+                uploadStream.on('error', (err) => reject(err));
+            });
+
+            console.log('File uploaded successfully:', uploadResult);
+            fileId = uploadResult._id;
+            imageUrl = `/api/events/image/${fileId}`;
+
+            // Update the event with the file ID and image URL
+            newEvent.fileId = fileId;
+            newEvent.imageUrl = imageUrl;
+            await newEvent.save();
+        }
+
+        res.status(201).json(newEvent);
     } catch (error) {
-      console.error('Error creating event:', error);
-      if (error.name === 'ValidationError') {
-        const errors = Object.values(error.errors).map(err => err.message);
-        return res.status(400).json({ errors });
-      }
-      res.status(500).json({ error: 'Failed to create event', details: error.message });
+        console.error('Error creating event:', error);
+        if (error.name === 'ValidationError') {
+            const errors = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({ errors });
+        }
+        res.status(500).json({ error: 'Failed to create event', details: error.message });
     }
-  }
-  
-  
+}
 
 // Update event
 async function updateEvent(req, res) {
@@ -201,4 +199,3 @@ async function searchEventsByKeyword(req, res) {
         res.status(500).json({ error: 'Error occurred while searching for events.' });
     }
 }
-
