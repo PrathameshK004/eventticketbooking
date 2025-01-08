@@ -18,7 +18,7 @@ conn.once('open', () => {
   bucket = new GridFSBucket(conn.db, { bucketName: 'uploads' });
 });
 
-router.get('/:filename', (req, res) => {
+router.get('/:fileId', (req, res) => {
     const fileName = req.params.filename;
   
     // Find the file in GridFS using the filename
