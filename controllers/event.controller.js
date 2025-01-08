@@ -92,15 +92,18 @@ async function createEvent(req, res) {
         const newEvent = await Event.create(eventDetails);
 
         // Check if the event was saved successfully
-        if (!newEvent) {
-            return res.status(500).json({ error: 'Failed to create event, no event created.' });
+        if (!newEvent || !newEvent._id) {
+            return res.status(500).json({ error: 'Failed to create event, no event created or no _id assigned.' });
         }
+
+        console.log('Event created successfully:', newEvent);
 
         // Handle file upload if a file is present
         if (req.file) {
             const fileExtension = path.extname(req.file.originalname);
             const newFileName = `${newEvent._id}${fileExtension}`;
 
+            // Upload the file to GridFS
             const uploadResult = await new Promise((resolve, reject) => {
                 const uploadStream = bucket.openUploadStream(newFileName, {
                     contentType: req.file.mimetype,
@@ -112,12 +115,16 @@ async function createEvent(req, res) {
             });
 
             console.log('File uploaded successfully:', uploadResult);
+
+            // Assign fileId and imageUrl to the event
             fileId = uploadResult._id;
             imageUrl = `/api/events/image/${fileId}`;
 
             // Update the event with the file ID and image URL
             newEvent.fileId = fileId;
             newEvent.imageUrl = imageUrl;
+
+            // Save the updated event with file details
             await newEvent.save();
         }
 
@@ -131,6 +138,7 @@ async function createEvent(req, res) {
         res.status(500).json({ error: 'Failed to create event', details: error.message });
     }
 }
+
 
 
 
