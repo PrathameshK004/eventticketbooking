@@ -52,6 +52,7 @@ async function getEventById(req, res) {
 }
 
 // Create a new event with file upload
+// Create a new event with file upload
 async function createEvent(req, res) {
     console.log('Received request body:', req.body);
     console.log('Received file:', req.file);
@@ -138,6 +139,7 @@ async function createEvent(req, res) {
         res.status(500).json({ error: 'Failed to create event', details: error.message });
     }
 }
+
 
 
 
