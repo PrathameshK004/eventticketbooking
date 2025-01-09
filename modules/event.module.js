@@ -23,8 +23,8 @@ const eventSchema = new mongoose.Schema({
             message: props => `${props.value} is not a valid duration format! Use "X hours" or "Y minutes".`
         }
     },
-    eventFeatures: [{ type: [String], trim: true }],
-    eventTags: [{ type: [String], trim: true }],
+    eventFeatures: [{ type: String, trim: true }], 
+    eventTags: [{ type: String, trim: true }],
     eventOrgInsta: { type: String, trim: true },
     eventOrgX: { type: String, trim: true },
     eventOrgFacebook: { type: String, trim: true }
