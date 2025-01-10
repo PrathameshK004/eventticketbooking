@@ -166,8 +166,6 @@ async function createEvent(req, res) {
 }
 
 
-
-
 async function updateEvent(req, res) {
     const eventId = req.params.eventId;
     const updatedEventData = req.body;
@@ -235,12 +233,12 @@ async function updateEvent(req, res) {
                 res.status(500).json({ error: 'File upload failed.' });
             });
         } else {
-            // Ensure 'features' and 'tags' are arrays
-            if (updatedEventData.features && typeof updatedEventData.features === 'string') {
-                updatedEventData.features = updatedEventData.features.split(',').map(f => f.trim());
+            // Ensure 'features' and 'tags' are arrays of individual items
+            if (updatedEventData.eventFeatures && typeof updatedEventData.eventFeatures === 'string') {
+                updatedEventData.eventFeatures = updatedEventData.eventFeatures.split(',').map(f => f.trim());
             }
-            if (updatedEventData.tags && typeof updatedEventData.tags === 'string') {
-                updatedEventData.tags = updatedEventData.tags.split(',').map(t => t.trim());
+            if (updatedEventData.eventTags && typeof updatedEventData.eventTags === 'string') {
+                updatedEventData.eventTags = updatedEventData.eventTags.split(',').map(t => t.trim());
             }
 
             // Update event properties
