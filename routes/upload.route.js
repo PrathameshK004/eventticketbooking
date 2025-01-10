@@ -22,7 +22,7 @@ conn.once('open', () => {
 // Multer middleware with file filter for images and videos
 const upload = multer({
   fileFilter: (req, file, cb) => {
-    const fileTypes = /jpeg|jpg|png|gif|mp4|mkv|avi|mov|wmv/; // Define accepted file types
+    const fileTypes = /jpeg|jpg|png/; // Define accepted file types
     const extname = fileTypes.test(file.mimetype); // Check MIME type
     const mimetype = fileTypes.test(file.originalname.split('.').pop().toLowerCase()); // Check extension
 

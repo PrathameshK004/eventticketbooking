@@ -232,6 +232,14 @@ async function updateEvent(req, res) {
                 res.status(500).json({ error: 'File upload failed.' });
             });
         } else {
+
+            if (updatedEventData.eventFeatures && typeof updatedEventData.eventFeatures === 'string') {
+                updatedEventData.eventFeatures = updatedEventData.eventFeatures.split(',').map(f => f.trim());
+            }
+            if (updatedEventData.eventTags && typeof updatedEventData.eventTags === 'string') {
+                updatedEventData.eventTags = updatedEventData.eventTags.split(',').map(t => t.trim());
+            }
+            
             // If no new file, just update the event without changing the file
             Object.assign(event, updatedEventData);
             await event.save();
