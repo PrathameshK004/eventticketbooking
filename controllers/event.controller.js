@@ -166,57 +166,73 @@ async function createEvent(req, res) {
 }
 
 
+
 async function updateEvent(req, res) {
     const eventId = req.params.eventId;
     const updatedEventData = req.body;
 
     try {
         const event = await Event.findById(eventId);
-        if (!event) return res.status(404).json({ error: 'Event not found' });
+
+        if (!event) {
+            return res.status(404).json({ error: 'Event not found' });
+        }
 
         // Handle file upload if a new file is provided
         if (req.file) {
-            if (event.fileId) await bucket.delete(ObjectId(event.fileId)); // Delete old file
+            if (event.fileId) await bucket.delete(ObjectId(event.fileId)); // Delete the old file if it exists
 
             const fileExtension = path.extname(req.file.originalname);
             const newFileName = `${eventId}${fileExtension}`;
-            const uploadStream = bucket.openUploadStream(newFileName, { contentType: req.file.mimetype });
-            uploadStream.end(req.file.buffer);
-
-            const fileUploaded = await new Promise((resolve, reject) => {
-                uploadStream.on('finish', resolve);
-                uploadStream.on('error', reject);
+            const uploadStream = bucket.openUploadStream(newFileName, {
+                contentType: req.file.mimetype,
             });
 
-            // Retrieve uploaded file metadata
-            await client.connect();
-            const db = client.db();
-            const filesCollection = db.collection('uploads.files');
-            const uploadedFile = await filesCollection.findOne({ filename: newFileName });
-            await client.close();
+            // Use Promises to wait for the upload to complete
+            await new Promise((resolve, reject) => {
+                uploadStream.end(req.file.buffer);
 
-            if (!uploadedFile) return res.status(404).json({ error: 'File not found.' });
+                uploadStream.on('finish', async () => {
+                    try {
+                        const db = client.db(); // Use your database name
+                        const filesCollection = db.collection('uploads.files');
+                        const uploadedFile = await filesCollection.findOne({ filename: newFileName });
 
-            // Update event with new file data
-            event.fileId = uploadedFile._id;
-            event.imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
+                        if (!uploadedFile) return reject(new Error('File upload successful, but metadata not found.'));
+
+                        event.fileId = uploadedFile._id;
+                        event.imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
+                        resolve();
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+
+                uploadStream.on('error', (err) => reject(err));
+            });
         }
 
-        // Parse features and tags into arrays
-        const parseToArray = (field) => (typeof field === 'string' ? field.split(',').map(i => i.trim()) : field);
-        updatedEventData.eventFeatures = parseToArray(updatedEventData.eventFeatures);
-        updatedEventData.eventTags = parseToArray(updatedEventData.eventTags);
+        // Ensure features and tags are arrays
+        const parseToArray = (field) =>
+            typeof field === 'string' ? field.split(',').map((item) => item.trim()) : field;
 
-        // Update and save the event
+        if (updatedEventData.features) updatedEventData.features = parseToArray(updatedEventData.features);
+        if (updatedEventData.tags) updatedEventData.tags = parseToArray(updatedEventData.tags);
+
+        // Update event data
         Object.assign(event, updatedEventData);
         await event.save();
 
-        res.status(200).json({ event, message: 'Event updated successfully!' });
+        res.status(200).json({
+            event,
+            message: req.file ? 'Event updated with new image successfully!' : 'Event updated successfully!',
+        });
     } catch (err) {
         console.error('Error updating event:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 }
+
 
 
 // Delete event
