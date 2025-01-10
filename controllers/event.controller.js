@@ -136,7 +136,6 @@ async function createEvent(req, res) {
                     imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
 
                     // Update the event document with the fileId and imageUrl
-                    newEvent.fileId = fileId;
                     newEvent.imageUrl = imageUrl;
                     await newEvent.save();
 
@@ -216,7 +215,6 @@ async function updateEvent(req, res) {
                 uploadStream.on('error', (err) => reject(err));
             });
 
-            event.fileId = uploadedFile._id;
             event.imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
         }
 
