@@ -41,17 +41,24 @@ async function getBookingById(req, res) {
 
 async function createBooking(req, res) {
     try {
+        // Calculate the sum of the array of `noOfPeoples`
+        const totalPeople = Array.isArray(req.body.noOfPeoples)
+            ? req.body.noOfPeoples.reduce((sum, num) => sum + num, 0)
+            : 0;
+
         // Create the booking
         const newBooking = await Booking.create(req.body);
 
         // Find the event by eventId and update its capacity
         const event = await Event.findById(req.body.eventId);
         if (event) {
-            // Decrement the event capacity by the number of people in the booking
-            event.eventCapacity -= req.body.noOfPeople;
+            // Decrement the event capacity by the total number of people
+            event.eventCapacity -= totalPeople;
 
             // Ensure event capacity doesn't go below zero
             if (event.eventCapacity < 0) {
+                // Rollback booking if capacity is exceeded
+                await Booking.findByIdAndDelete(newBooking._id);
                 return res.status(400).json({ message: "Not enough capacity for this booking." });
             }
 
@@ -70,11 +77,11 @@ async function createBooking(req, res) {
             const errorMessages = Object.values(error.errors).map(err => err.message);
             return res.status(400).json({
                 message: "Validation error occurred",
-                errors: errorMessages 
+                errors: errorMessages,
             });
         }
-        
-        res.status(500).json({ message: "Internal server error " +error.message});
+
+        res.status(500).json({ message: "Internal server error " + error.message });
     }
 }
 
@@ -88,6 +95,11 @@ async function updateBooking(req, res) {
         if (!booking) {
             return res.status(404).json({ error: 'Booking not found' });
         }
+
+        // Calculate the sum of the array of `noOfPeoples`
+        const totalPeople = Array.isArray(booking.noOfPeoples)
+            ? booking.noOfPeoples.reduce((sum, num) => sum + num, 0)
+            : 0;
 
         // Prevent changing from "Cancelled" or "Completed" back to "Booked"
         if ((booking.book_status === 'Cancelled' || booking.book_status === 'Completed') && updatedStatus === 'Booked') {
@@ -104,7 +116,8 @@ async function updateBooking(req, res) {
             if (updatedStatus === 'Cancelled') {
                 const event = await Event.findById(booking.eventId);
                 if (event) {
-                    event.eventCapacity += booking.noOfPeople;
+                    // Increment the event capacity by the total number of people
+                    event.eventCapacity += totalPeople;
                     await event.save();
                 } else {
                     return res.status(404).json({ error: 'Event not found' });
@@ -121,7 +134,6 @@ async function updateBooking(req, res) {
         res.status(500).json({ error: 'Internal server error ' + err });
     }
 }
-
 
 
 async function deleteBooking(req, res) {

@@ -10,8 +10,18 @@ const bookingDetailsSchema = new mongoose.Schema({
     eventTitle: { type: String },
     eventDate: { type: Date },
     bookingDate: { type: Date, default: Date.now },
-    noOfPeople: { type: Number }, //*
+    noOfPeoples: { 
+        type: [Number], // Define as an array of numbers
+        validate: {
+            validator: function(value) {
+                // Ensure the array has exactly 3 elements
+                return Array.isArray(value) && value.length === 3;
+            },
+            message: "noOfPeoples must be an array with exactly 3 values."
+        }
+    }, //*
     totalAmount: { type: Number }, //*
+    transactionId: {type: String},
     pay_status: { 
         type: String, 
         enum: ['Successful']
