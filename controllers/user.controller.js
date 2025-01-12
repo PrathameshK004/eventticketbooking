@@ -1,9 +1,10 @@
+
 const express = require('express');
 const router = express.Router();
 const User = require('../modules/user.module.js');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-const nodemailer = require('nodemailer');
+const ObjectId = require('mongoose').Types.ObjectId;
+
 require('dotenv').config();
 
 module.exports = {
@@ -13,93 +14,8 @@ module.exports = {
     createUser,
     updateUser,
     deleteUser,
-    logoutUser,
-    createTemporaryUser,
-    validateCode
+    logoutUser
 };
-
-
-async function createTemporaryUser(req, res) {
-    const { userName, mobileNo, emailID, password } = req.body;
-
-    try {
-        // Generate a 4-digit random verification code
-        const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
-
-        // Hash the verification code
-        const salt = await bcrypt.genSalt();
-        const hashedCode = await bcrypt.hash(verificationCode, salt);
-
-        // Create a temporary user
-        const newUser = new User({
-            userName,
-            mobileNo,
-            emailID,
-            password,
-            tempCode: hashedCode,
-            isVerified: false
-        });
-        await newUser.save();
-
-        // Send email with verification code
-        const transporter = nodemailer.createTransport({
-            service: 'Gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            }
-        });
-
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: emailID,
-            subject: 'Your Verification Code',
-            text: `Your verification code is ${verificationCode}`
-        });
-
-        res.status(201).json({
-            message: 'Temporary user created. Verification code sent to your email.',
-            userId: newUser._id
-        });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ error: 'Failed to create user.' });
-    }
-}
-
-async function validateCode(req, res) {
-    const { emailID, code } = req.body;
-
-    try {
-        const user = await User.findOne({ emailID });
-
-        if (!user) {
-            return res.status(404).json({ error: 'User not found.' });
-        }
-
-        if (user.isVerified) {
-            return res.status(400).json({ error: 'User is already verified.' });
-        }
-
-        // Verify the code
-        const isValidCode = await bcrypt.compare(code, user.tempCode);
-        if (isValidCode) {
-            // Mark the user as verified
-            user.isVerified = true;
-            user.tempCode = undefined; // Remove the temp code after verification
-            await user.save();
-
-            res.status(200).json({ message: 'User successfully verified.' });
-        } else {
-            // Delete the user if the code is incorrect
-            await User.findByIdAndDelete(user._id);
-            res.status(400).json({ error: 'Invalid code. User deleted.' });
-        }
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ error: 'Internal server error.' });
-    }
-}
 
 function getAllUsers(req, res) {
     User.find()
