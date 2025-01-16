@@ -97,7 +97,7 @@ async function createBooking(req, res) {
     }
 }
 
-async function sendBookingConfirmationEmail(userEmail, booking, event, userName) {
+async function sendBookingConfirmationEmail(userEmail, booking, userName) {
     try {
         const transporter = nodemailer.createTransport({
             service: 'gmail', // Use your email provider
@@ -141,7 +141,6 @@ async function sendBookingConfirmationEmail(userEmail, booking, event, userName)
         };
 
         await transporter.sendMail(mailOptions);
-        console.log("Booking confirmation email sent successfully.");
     } catch (error) {
         console.error("Failed to send booking confirmation email:", error);
     }
