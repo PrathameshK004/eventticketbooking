@@ -80,7 +80,7 @@ async function createBooking(req, res) {
         }
 
         // Send confirmation email to user
-        await sendBookingConfirmationEmail(user.emailID, newBooking, event, user.userName);
+        await sendBookingConfirmationEmail(user.emailID, newBooking, user.userName);
 
         // Respond with the created booking
         res.status(201).json(newBooking);
