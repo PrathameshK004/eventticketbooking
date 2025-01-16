@@ -80,7 +80,7 @@ async function createBooking(req, res) {
         }
 
         // Send confirmation email to user
-        await sendBookingConfirmationEmail(user.emailID, newBooking, event);
+        await sendBookingConfirmationEmail(user.emailID, newBooking, event, user.userName);
 
         // Respond with the created booking
         res.status(201).json(newBooking);
@@ -97,7 +97,7 @@ async function createBooking(req, res) {
     }
 }
 
-async function sendBookingConfirmationEmail(userEmail, booking, event) {
+async function sendBookingConfirmationEmail(userEmail, booking, event, userName) {
     try {
         const transporter = nodemailer.createTransport({
             service: 'gmail', // Use your email provider
@@ -126,7 +126,7 @@ async function sendBookingConfirmationEmail(userEmail, booking, event) {
             from: process.env.EMAIL,
             to: userEmail,
             subject: `Booking Confirmation - ${booking.eventTitle}`,
-            html: `<p>Dear Customer,</p>
+            html: `<p>Dear ${userName},</p>
                    <p>Your booking for <strong>${booking.eventTitle}</strong> on <strong>${eventDate}</strong> has been confirmed.</p>
                    <p><strong>Booking Details:</strong></p>
                    <ul>
