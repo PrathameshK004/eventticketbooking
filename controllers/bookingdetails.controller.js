@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Booking = require('../modules/bookingdetails.module.js');
 const Event = require('../modules/event.module.js');
+const User = require('../modules/user.module.js');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
 
