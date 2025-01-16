@@ -119,7 +119,7 @@ async function sendBookingConfirmationEmail(userEmail, booking, event) {
 
         // Construct email body dynamically
         const mailOptions = {
-            from: process.env.EMAIL_USER,
+            from: process.env.EMAIL,
             to: userEmail,
             subject: `Booking Confirmation - ${booking.eventTitle}`,
             html: `<p>Dear Customer,</p>
