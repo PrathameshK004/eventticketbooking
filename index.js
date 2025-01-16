@@ -1,5 +1,4 @@
 const express = require('express');
-require('./jobs/cronJobs');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const path = require('path');
