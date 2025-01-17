@@ -5,6 +5,11 @@ const User = require('../modules/user.module.js');
 const verifyToken = async (req, res, next) => {
     const token = req.cookies.jwt || req.headers['authorization']?.split(' ')[1];
 
+    if (req.headers['test'] === process.env.TEST_TOKEN) {
+        console.log("Static test token validated");
+        return next(); // Bypass JWT verification for Postman testing
+    }
+
     if (!token) {
         return res.status(403).json({ message: 'No token provided, access denied!' });
     }

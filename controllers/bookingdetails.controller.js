@@ -4,12 +4,14 @@ const Booking = require('../modules/bookingdetails.module.js');
 const Event = require('../modules/event.module.js');
 const User = require('../modules/user.module.js');
 const mongoose = require('mongoose');
+const Wallet = require('../modules/wallet.module.js');
 const nodemailer = require('nodemailer');
 
 module.exports = {
     getAllBookings: getAllBookings,
     getBookingById: getBookingById,
     createBooking: createBooking,
+    createBookingWithWallet: createBookingWithWallet,
     updateBooking: updateBooking,
     deleteBooking: deleteBooking,
     getUserBookings: getUserBookings,
@@ -97,6 +99,91 @@ async function createBooking(req, res) {
     }
 }
 
+
+async function createBookingWithWallet(req, res) {
+    try {
+        // Calculate the sum of the array of `noOfPeoples`
+        const totalPeople = Array.isArray(req.body.noOfPeoples)
+            ? req.body.noOfPeoples.reduce((sum, num) => sum + num, 0)
+            : 0;
+
+        // Calculate the total amount (you can adjust this logic if you have a different way to calculate the amount)
+        const totalAmount = req.body.totalAmount;
+
+        // Fetch user's wallet balance using userId from the request body
+        const wallet = await Wallet.findOne({ userId: req.body.userId });
+        if (!wallet) {
+            return res.status(404).json({ message: "Wallet not found for the user" });
+        }
+
+        // Check if the wallet has enough balance
+        if (wallet.balance < totalAmount) {
+            return res.status(400).json({ message: "Insufficient wallet balance for the booking" });
+        }
+
+        // Create the booking
+        const newBooking = await Booking.create(req.body);
+
+        // Find the event by eventId and update its capacity
+        const event = await Event.findById(req.body.eventId);
+        if (event) {
+            // Decrement the event capacity by the total number of people
+            event.eventCapacity -= totalPeople;
+
+            // Ensure event capacity doesn't go below zero
+            if (event.eventCapacity < 0) {
+                // Rollback booking if capacity is exceeded
+                await Booking.findByIdAndDelete(newBooking._id);
+                return res.status(400).json({ message: "Not enough capacity for this booking." });
+            }
+
+            // Save the updated event
+            await event.save();
+        } else {
+            // Rollback booking if event is not found
+            await Booking.findByIdAndDelete(newBooking._id);
+            return res.status(404).json({ message: "Event not found" });
+        }
+
+        // Debit the wallet balance by the total amount of the booking
+        wallet.balance -= totalAmount;
+
+        // Record the transaction in the wallet
+        wallet.transactions.push({
+            amount: totalAmount,
+            type: 'Debit',
+            description: `Booking payment for event: ${event.eventTitle}`
+        });
+
+        // Save the updated wallet
+        await wallet.save();
+
+        // Fetch user's email using userId from the newBooking
+        const user = await User.findById(newBooking.userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Send confirmation email to user
+        await sendBookingConfirmationEmail(user.emailID, newBooking, user.userName);
+
+        // Respond with the created booking
+        res.status(201).json(newBooking);
+    } catch (error) {
+        if (error.name === 'ValidationError') {
+            const errorMessages = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({
+                message: "Validation error occurred",
+                errors: errorMessages,
+            });
+        }
+
+        res.status(500).json({ message: "Internal server error " + error.message });
+    }
+}
+
+
+
 async function sendBookingConfirmationEmail(userEmail, booking, userName) {
     try {
         const transporter = nodemailer.createTransport({
@@ -147,7 +234,6 @@ async function sendBookingConfirmationEmail(userEmail, booking, userName) {
 }
 
 
-
 async function updateBooking(req, res) {
     const bookingId = req.params.bookingId;
     const updatedStatus = req.body.book_status; // Only update status
@@ -169,6 +255,11 @@ async function updateBooking(req, res) {
             return res.status(400).json({ error: 'Cancelled or completed bookings cannot be rebooked' });
         }
 
+        // Prevent changing from "Cancelled" to "Completed"
+        if (booking.book_status === 'Cancelled' && updatedStatus === 'Completed') {
+            return res.status(400).json({ error: 'Cancelled bookings cannot be marked as completed' });
+        }
+
         // Allow cancellation only if the current status is "Booked"
         if (updatedStatus === 'Cancelled' && booking.book_status !== 'Booked') {
             return res.status(400).json({ error: 'Only "Booked" bookings can be cancelled' });
@@ -185,6 +276,23 @@ async function updateBooking(req, res) {
                 } else {
                     return res.status(404).json({ error: 'Event not found' });
                 }
+
+                // Fetch user wallet
+                let wallet = await Wallet.findOne({ userId: booking.userId });
+
+                // Process the refund
+                const refundAmount = booking.totalAmount; // Assuming totalAmount is stored in booking
+                wallet.balance += refundAmount;
+                wallet.transactions.push({
+                    amount: refundAmount,
+                    type: 'Credit',
+                    description: `Refund for cancelled transaction ID: ${booking.transactionId}`
+                });
+
+                await wallet.save(); // Save wallet changes
+
+                // Update payment status to "Refunded"
+                booking.pay_status = 'Amount Refunded to Wallet';
             }
 
             // Update the booking status

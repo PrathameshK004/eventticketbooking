@@ -24,7 +24,7 @@ const bookingDetailsSchema = new mongoose.Schema({
     transactionId: {type: String},
     pay_status: { 
         type: String, 
-        enum: ['Successful']
+        enum: ['Successful', 'Amount Refunded to Wallet']
     }, //*
     book_status: { 
         type: String, 

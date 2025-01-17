@@ -8,6 +8,7 @@ router.get('/userBookings/:userId', bookingdetailsInterceptor.validateUserId, bo
 router.get('/eventBookings/:eventId', bookingdetailsInterceptor.validateEventId, bookingdetailsController.getEventBookings);
 router.get('/:bookingId', bookingdetailsInterceptor.validateBookingId, bookingdetailsController.getBookingById);
 router.post('/addBookingDetails', bookingdetailsInterceptor.validateNewBooking, bookingdetailsController.createBooking);
+router.post('/addBookingDetailsByWallet', bookingdetailsInterceptor.validateNewBooking, bookingdetailsController.createBookingWithWallet);
 router.put('/:bookingId', bookingdetailsInterceptor.validateBookingId, bookingdetailsInterceptor.validateUpdateBooking, bookingdetailsController.updateBooking);
 router.delete('/:bookingId', bookingdetailsInterceptor.validateBookingId, bookingdetailsController.deleteBooking);
 

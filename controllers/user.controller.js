@@ -1,4 +1,4 @@
-
+const Wallet = require('../modules/wallet.module.js');
 const express = require('express');
 const router = express.Router();
 const User = require('../modules/user.module.js');
@@ -52,7 +52,15 @@ const createToken = (key) => { // Update to key from id
 async function createUser(req, res) {
     try {
         const newUser = await User.create(req.body);
+        // Create an associated wallet with an initial balance of 0
+        const newWallet = new Wallet({
+            userId: newUser._id,  // Link the wallet to the newly created user
+            balance: 0,
+            transactions: []
+        });
 
+        // Save the wallet
+        await newWallet.save();
        
 
         res.status(201).json({
