@@ -172,11 +172,16 @@ async function updateEvent(req, res) {
     const updatedEventData = req.body;
 
     try {
-        const event = await Event.findById(eventId);
-
+        const event = await Event.findByIdAndUpdate(
+            eventId,
+            { $set: updatedEventData }, // Apply the updates
+            { new: true, runValidators: true } // Get the updated document
+        );
+        
         if (!event) {
             return res.status(404).json({ error: 'Event not found' });
         }
+        
 
         // If a new file is uploaded, handle the file update
         if (req.file) {
