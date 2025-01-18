@@ -10,7 +10,7 @@ module.exports = {
 
 // Validate that the user has a wallet and exists
 async function validateUserWallet(req, res, next) {
-    const userId = req.user.key;
+     let userId = req.params.userId;
 
     if (!userId || !isUuidValid(userId)) {
         return res.status(400).json({ error: 'User ID is required and must be a valid UUID.' });

@@ -5,8 +5,8 @@ let verifyToken = require('../interceptor/auth.interceptor')
 let walletInterceptor = require('../interceptor/wallet.interceptor');
 
 
-router.get('/balance', verifyToken, walletInterceptor.validateUserWallet, walletController.getWalletBalance);
-router.post('/update', verifyToken, walletInterceptor.validateUserWallet, walletInterceptor.validateUpdateWallet, walletController.updateWallet);
-router.delete('/delete', verifyToken, walletInterceptor.validateUserWallet ,walletController.deleteWallet);
+router.get('/getWalletDetails/:userId', verifyToken, walletInterceptor.validateUserWallet, walletController.getWalletBalance);
+router.put('/updateWallet/:userId', verifyToken, walletInterceptor.validateUserWallet, walletInterceptor.validateUpdateWallet, walletController.updateWallet);
+router.delete('/deleteWallet/:userId', verifyToken, walletInterceptor.validateUserWallet ,walletController.deleteWallet);
 
 module.exports = router;
