@@ -109,7 +109,7 @@ async function deleteUser(req, res) {
 
     try {
         const user = await User.findByIdAndDelete(userId);
-        await Wallet.findOneAndDelete({ userId: wallet.userId });
+        await Wallet.findOneAndDelete({ userId: userId });
         if (!user) {
             return res.status(404).json({ error: 'User not found' }); 
         }
