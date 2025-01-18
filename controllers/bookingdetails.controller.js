@@ -211,7 +211,7 @@ async function sendBookingConfirmationEmail(userEmail, booking, userName) {
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
                     <div style="text-align: center;">
-                        <img src="https://eventticketbooking-cy6o.onrender.com/logo.png" alt="EventHorizon Logo" style="max-width: 150px; margin-bottom: 20px;">
+                        <img src="https://i.imgur.com/sx36L2V.png" alt="EventHorizon Logo" style="max-width: 150px; margin-bottom: 20px;">
                     </div>
                     <h2 style="color: #333; text-align: center;">Booking Confirmation</h2>
                     <p>Dear <strong>${userName}</strong>,</p>
