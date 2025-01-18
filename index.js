@@ -57,6 +57,10 @@ app.get('/file', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+app.get('/logo', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'logo.png'));
+});
+
 // Routes
 app.use('/file/upload', uploadRoutes);
 app.use('/file/retrieve', retrieveRoutes);
