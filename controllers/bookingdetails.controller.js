@@ -82,7 +82,7 @@ async function createBooking(req, res) {
         }
 
         // Send confirmation email to user
-        await sendBookingConfirmationEmail(user.emailID, newBooking);
+        await sendBookingConfirmationEmail(user.emailID, newBooking, event);
 
         // Respond with the created booking
         res.status(201).json(newBooking);
@@ -165,7 +165,7 @@ async function createBookingWithWallet(req, res) {
         }
 
         // Send confirmation email to user
-        await sendBookingConfirmationEmail(user.emailID, newBooking);
+        await sendBookingConfirmationEmail(user.emailID, newBooking, event);
 
         // Respond with the created booking
         res.status(201).json(newBooking);
@@ -184,7 +184,7 @@ async function createBookingWithWallet(req, res) {
 
 
 
-async function sendBookingConfirmationEmail(userEmail, booking) {
+async function sendBookingConfirmationEmail(userEmail, booking, event) {
     try {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
@@ -212,7 +212,7 @@ async function sendBookingConfirmationEmail(userEmail, booking) {
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border-radius: 8px; background-color: #f9f9f9; border: 1px solid #ddd;">
                     
                     <!-- Header Section -->
-                    <div style="text-align: center; background-color: #0078ff; padding: 15px; border-radius: 8px 8px 0 0;">
+                    <div style="text-align: center; background-color: #030711; padding: 15px; border-radius: 8px 8px 0 0;">
                         <img src="https://i.imgur.com/sx36L2V.png" alt="EventHorizon Logo" style="max-width: 80px;">
                         <h2 style="color: #ffffff; margin: 10px 0;">Booking Confirmation</h2>
                     </div>
@@ -222,9 +222,12 @@ async function sendBookingConfirmationEmail(userEmail, booking) {
                         <p style="font-size: 16px;">Dear <strong>${booking.customer_name}</strong>,</p>
                         <p>We are pleased to confirm your booking for:</p>
                         
-                        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px;">
-                            <h3 style="color: #333; text-align: center;">${booking.eventTitle}</h3>
-                            <p style="text-align: center;"><strong>${eventDate}</strong></p>
+                        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px; text-align: center;">
+                            <!-- Event Image -->
+                            <img src="${event.imageUrl}" alt="${booking.eventTitle}" style="max-width: 120px; border-radius: 5px; margin-bottom: 10px;"> 
+                            
+                            <h3 style="color: #333;">${booking.eventTitle}</h3>
+                            <p><strong>${eventDate}</strong></p>
                         </div>
         
                         <h3 style="color: #0078ff; margin-top: 20px;">Booking Details</h3>
@@ -253,8 +256,9 @@ async function sendBookingConfirmationEmail(userEmail, booking) {
                 </div>
             `
         };
-
+        
         await transporter.sendMail(mailOptions);
+        
     } catch (error) {
         console.error("Failed to send booking confirmation email:", error);
     }
