@@ -82,7 +82,7 @@ async function createBooking(req, res) {
         }
 
         // Send confirmation email to user
-        await sendBookingConfirmationEmail(user.emailID, newBooking, user.userName);
+        await sendBookingConfirmationEmail(user.emailID, newBooking);
 
         // Respond with the created booking
         res.status(201).json(newBooking);
@@ -165,7 +165,7 @@ async function createBookingWithWallet(req, res) {
         }
 
         // Send confirmation email to user
-        await sendBookingConfirmationEmail(user.emailID, newBooking, user.userName);
+        await sendBookingConfirmationEmail(user.emailID, newBooking);
 
         // Respond with the created booking
         res.status(201).json(newBooking);
@@ -184,7 +184,7 @@ async function createBookingWithWallet(req, res) {
 
 
 
-async function sendBookingConfirmationEmail(userEmail, booking, userName) {
+async function sendBookingConfirmationEmail(userEmail, booking) {
     try {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
@@ -207,29 +207,51 @@ async function sendBookingConfirmationEmail(userEmail, booking, userName) {
         const mailOptions = {
             from: process.env.EMAIL,
             to: userEmail,
-            subject: `Booking Confirmation - ${booking.eventTitle}`,
+            subject: `Booking Confirmed: ${booking.eventTitle}`,
             html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9;">
-                    <div style="text-align: center;">
-                        <img src="https://i.imgur.com/sx36L2V.png" alt="EventHorizon Logo" style="max-width: 150px; margin-bottom: 20px;">
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border-radius: 8px; background-color: #f9f9f9; border: 1px solid #ddd;">
+                    
+                    <!-- Header Section -->
+                    <div style="text-align: center; background-color: #0078ff; padding: 15px; border-radius: 8px 8px 0 0;">
+                        <img src="https://i.imgur.com/sx36L2V.png" alt="EventHorizon Logo" style="max-width: 80px;">
+                        <h2 style="color: #ffffff; margin: 10px 0;">Booking Confirmation</h2>
                     </div>
-                    <h2 style="color: #333; text-align: center;">Booking Confirmation</h2>
-                    <p>Dear <strong>${userName}</strong>,</p>
-                    <p>Your booking for <strong>${booking.eventTitle}</strong> on <strong>${eventDate}</strong> has been confirmed.</p>
-                    <div style="background: #fff; padding: 15px; border-radius: 5px;">
-                        <h3 style="color: #333;">Booking Details</h3>
-                        <ul style="list-style-type: none; padding: 0;">
-                            <li><strong>Transaction ID:</strong> ${booking.transactionId}</li>
-                            ${ticketDetails.length ? ticketDetails.join("") : "<li>No tickets booked</li>"}
-                        </ul>
+        
+                    <!-- Booking Summary -->
+                    <div style="background-color: #ffffff; padding: 20px; border-radius: 0 0 8px 8px;">
+                        <p style="font-size: 16px;">Dear <strong>${booking.customer_name}</strong>,</p>
+                        <p>We are pleased to confirm your booking for:</p>
+                        
+                        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                            <h3 style="color: #333; text-align: center;">${booking.eventTitle}</h3>
+                            <p style="text-align: center;"><strong>${eventDate}</strong></p>
+                        </div>
+        
+                        <h3 style="color: #0078ff; margin-top: 20px;">Booking Details</h3>
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                            <tr>
+                                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Transaction ID:</strong></td>
+                                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${booking.transactionId}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Tickets:</strong></td>
+                                <td style="padding: 8px; border-bottom: 1px solid #ddd;">
+                                    ${ticketDetails.length ? ticketDetails.join("") : "No tickets booked"}
+                                </td>
+                            </tr>
+                        </table>
+        
+                        <p style="text-align: center; color: gray; font-size: 12px; margin-top: 20px;">
+                            Thank you for booking with us!<br>Best Regards, <br>EventHorizon Team
+                        </p>
                     </div>
-                    <p style="text-align: center; color: gray; font-size: 12px; margin-top: 20px;">
-                        Thank you for booking with us!<br>
-                        Best Regards, <br>EventHorizon Team
-                    </p>
-                    <hr>
+        
+                    <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        
+                    <!-- Footer -->
                     <p style="color:gray; font-size:12px; text-align: center;">This is an autogenerated message. Please do not reply to this email.</p>
-                </div>`
+                </div>
+            `
         };
 
         await transporter.sendMail(mailOptions);
