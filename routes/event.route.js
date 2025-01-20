@@ -28,12 +28,7 @@ const upload = multer({
 // Define routes
 router.get('/allEvents', eventController.getAllEvents);
 router.get('/:eventId', eventInterceptor.validateEventId, eventController.getEventById);
-router.post(
-  '/addEvent',
-  upload.single('file'),
-  eventInterceptor.validateNewEvent,
-  eventController.createEvent
-);
+router.post('/addEvent', upload.single('file'), eventInterceptor.validateNewEvent, eventController.createEvent);
 router.put('/:eventId', upload.single('file'), eventInterceptor.validateUpdateEvent, eventController.updateEvent);
 router.delete('/:eventId', eventInterceptor.validateEventId, eventController.deleteEvent);
 
