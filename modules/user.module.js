@@ -2,25 +2,25 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
 const userSchema = new mongoose.Schema({
-    userName: { type: String},
-    mobileNo: { type: Number},
-    emailID: { type: String},
-    password: { type: String},
-    imageUrl: { type: String},
+    userName: { type: String },
+    mobileNo: { type: Number },
+    emailID: { type: String },
+    password: { type: String },
     roles: {
-        type: [String],
-        enum: ['user', 'organizer', 'admin']
-    }
+        type: [Number],
+        enum: [0, 1, 2] // 0: User, 1: Organizer, 2: Admin
+    },
+    code: { type: Number }, // OTP Code
+    codeExpiry: { type: Date } // OTP Expiry
 });
 
-userSchema.pre('save', function(next) {
-    if (!this.roles.includes('user')) {
-            this.roles.unshift('user');
+userSchema.pre('save', function (next) {
+    if (!this.roles.includes(0)) {
+        this.roles.unshift(0);
     }
     this.roles = [...new Set(this.roles)];
-    next(); 
+    next();
 });
-
 
 
 userSchema.pre('save', async function(next){

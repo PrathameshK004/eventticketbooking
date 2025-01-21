@@ -14,7 +14,11 @@ router.get('/:userId', verifyToken, userInterceptor.validateUserId, usersControl
 router.post('/login', userInterceptor.checkLogin, usersController.validateLogin);
 router.post('/addUser', userInterceptor.validateNewUser, usersController.createUser);
 router.put('/:userId', verifyToken, userInterceptor.validateUserId, userInterceptor.validateUpdateUser, usersController.updateUser);
-router.delete('/:userId', verifyToken, userInterceptor.validateUserId,usersController.deleteUser)
+router.delete('/:userId', verifyToken, userInterceptor.validateUserId, usersController.deleteUser);
+router.post("/sendOtp", userInterceptor.validateOtpReq, usersController.sendOTP);
+router.post('/login/admin', userInterceptor.checkAdminLogin, usersController.validateAdminLogin);
+router.post("/forgotPassword", userInterceptor.checkForgotPassword, usersController.forgotPassword);
+
 module.exports = router;
 
 
