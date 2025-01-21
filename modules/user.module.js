@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
         type: [Number],
         enum: [0, 1, 2] // 0: User, 1: Organizer, 2: Admin
     },
+    imageUrl: {type: String},
     code: { type: Number }, // OTP Code
     codeExpiry: { type: Date } // OTP Expiry
 });
