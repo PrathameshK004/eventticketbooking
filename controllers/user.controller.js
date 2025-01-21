@@ -11,9 +11,11 @@ require('dotenv').config();
 module.exports = {
     sendOTP,
     validateLogin,
+    validateLoginGoogle,
     getAllUsers,
     getUserById,
     createUser,
+    createUserGoogle,
     updateUser,
     deleteUser,
     logoutUser,
@@ -161,6 +163,42 @@ async function createUser(req, res) {
     }
 }
 
+async function createUserGoogle(req, res) {
+    try {
+
+        const newUserGoogle=req.body;
+        newUserGoogle.isGoogle=true;
+
+        const newUser = await User.create(newUserGoogle);
+        // Create an associated wallet with an initial balance of 0
+        const newWallet = new Wallet({
+            userId: newUser._id,  // Link the wallet to the newly created user
+            balance: 0,
+            transactions: []
+        });
+
+        // Save the wallet
+        await newWallet.save();
+        
+
+        res.status(201).json({
+            userId: newUser._id, 
+            userName: newUser.userName
+        });
+    } catch (error) {
+        if (error.name === 'ValidationError') {
+            const errorMessages = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({
+                message: "Validation error occurred",
+                errors: errorMessages 
+            });
+        }
+        console.error(error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}
+
+
 async function updateUser(req, res) {
     const userId = req.params.userId; 
     const updatedUserData = req.body; 
@@ -236,6 +274,40 @@ async function validateLogin(req, res) {
         res.status(400).json({ message: err.message || 'Invalid mobile number/email or password' });
     }
 }
+
+
+async function validateLoginGoogle(req, res) {
+    const { mobile_email, password } = req.body;
+  
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+    try {
+        let user;
+
+        if (emailRegex.test(mobile_email)) {
+            user = await User.loginWithGoogle(mobile_email, password);
+        } else {
+            return res.status(400).json({ message: 'Invalid email format' });
+        }
+
+        const token = createToken(user._id); // Ensure this is based on user._id
+        res.cookie('jwt', token, { 
+            httpOnly: true, 
+            secure: true, 
+            sameSite: 'None', // Allows cross-origin requests
+            maxAge: 2 * 60 * 60 * 1000 
+        });
+        res.status(200).json({ 
+            userId: user._id,
+            user: user.userName 
+        });
+
+    } catch (err) {
+        console.error("Login Error: ", err.message || err);
+        res.status(400).json({ message: err.message || 'Invalid mobile number/email or password' });
+    }
+}
+
 
 function logoutUser(req, res) {
     res.cookie('jwt', '', { 

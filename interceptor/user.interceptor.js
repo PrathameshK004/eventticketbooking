@@ -9,6 +9,7 @@ app.use(bodyParser.json());
 module.exports = {
   checkLogin: checkLogin,
   validateUserId: validateUserId,
+  validateNewUserGoogle: validateNewUserGoogle,
   validateNewUser: validateNewUser,
   validateUpdateUser: validateUpdateUser,
   checkAdminLogin: checkAdminLogin,
@@ -58,6 +59,57 @@ async function validateNewUser(req, res, next) {
 
 
   if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+  }
+
+
+  if (mobileNo) {
+    try {
+      const existingUser = await User.findOne({ mobileNo: mobileNo });
+      if (existingUser) {
+        return res.status(400).json({ error: 'Mobile Number already exist.' });
+      }
+    } catch (err) {
+      return res.status(500).json({ error: 'Error checking for existing user.' });
+    }
+  }
+
+  try {
+    const existingUser = await User.findOne({ emailID: emailID });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email already exist.' });
+    }
+  } catch (err) {
+    return res.status(500).json({ error: 'Error checking for existing user.' });
+  }
+
+  next();
+}
+
+
+async function validateNewUserGoogle(req, res, next) {
+
+  const { userName, mobileNo, emailID, passwordGoogle } = req.body;
+
+  if (!userName || !passwordGoogle || !emailID) {
+    return res.status(400).json({ error: 'UserName, Email and password are required fields.' });
+  }
+
+  if (mobileNo) {
+    const mobileRegex = /^[0-9]{10}$/;
+    if (!mobileRegex.test(mobileNo)) {
+      return res.status(400).json({ error: 'Invalid Mobile Number. It should be 10 digits.' });
+    }
+  }
+
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(emailID)) {
+    return res.status(400).json({ error: 'Invalid email format.' });
+  }
+
+
+  if (passwordGoogle.length < 8) {
     return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
   }
 
