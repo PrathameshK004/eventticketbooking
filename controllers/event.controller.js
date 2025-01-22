@@ -199,29 +199,46 @@ async function updateEvent(req, res) {
             uploadStream.end(req.file.buffer);
 
             // On file upload success, retrieve file metadata
-            const uploadedFile = await new Promise((resolve, reject) => {
-                uploadStream.on('finish', async (file) => {
-                    try {
-                        const db = client.db('eventticketbooking'); 
-                        const filesCollection = db.collection('uploads.files');
-                        const fileMetadata = await filesCollection.findOne({ filename: newFileName });
+            try {
+                // Connect to MongoDB
+                const db = client.db('eventticketbooking'); 
+                const filesCollection = db.collection('uploads.files'); // The collection where GridFS stores file metadata
 
-                        if (!fileMetadata) {
-                            return reject(new Error('Uploaded file metadata not found.'));
-                        }
+                // Query the fs.files collection to find the file by its filename
+                const uploadedFile = await filesCollection.findOne({ filename: newFileName });
 
-                        resolve(fileMetadata);
-                    } catch (err) {
-                        reject(err);
-                    }
-                });
+                // If no file found, return a 404 error
+                if (!uploadedFile) {
+                    return res.status(404).json({ error: 'File not found.' });
+                }
 
-                uploadStream.on('error', (err) => reject(err));
-            });
+                // Send file metadata as a response
+                const fileMetadata = {
+                    _id: uploadedFile._id,
+                    chunkSize: uploadedFile.chunkSize,
+                    contentType: uploadedFile.contentType,
+                    filename: uploadedFile.filename,
+                    length: uploadedFile.length,
+                    uploadDate: uploadedFile.uploadDate,
+                };
 
-            event.fileId = uploadedFile._id;
-            event.imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
-        }
+                event.fileId = fileMetadata._id;
+
+                // Construct image URL based on the file _id
+                imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
+
+                // Update the event document with the fileId and imageUrl
+                event.imageUrl = imageUrl;
+                await event.save();
+
+                res.status(201).json({ event: event, fileMetadata });
+            } catch (err) {
+                console.error('Error retrieving file info:', err);
+                res.status(500).json({ error: 'Error retrieving file info from the database.' });
+            } finally {
+                await client.close(); // Close MongoDB connection after the operation
+            }
+        };
 
         // Handle optional updates for eventFeatures and eventTags
         if (updatedEventData.eventFeatures !== undefined) {
