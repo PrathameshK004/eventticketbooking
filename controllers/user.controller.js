@@ -5,6 +5,7 @@ const User = require('../modules/user.module.js');
 const jwt = require('jsonwebtoken');
 const ObjectId = require('mongoose').Types.ObjectId;
 const nodemailer = require('nodemailer');
+const axios = require('axios');
 
 require('dotenv').config();
 
@@ -15,14 +16,15 @@ module.exports = {
     getAllUsers,
     getUserById,
     createUser,
+    createTempUser,
     createUserGoogle,
     updateUser,
     deleteUser,
     logoutUser,
     validateAdminLogin,
-    forgotPassword,
     makeOrg,
-    makeAdmin
+    makeAdmin,
+    removeAdmin
 };
 
 const generateOTP = () => Math.floor(1000 + Math.random() * 9000);
@@ -113,10 +115,10 @@ function getAllUsers(req, res) {
 
 async function getUserById(req, res) {
     let userId = req.params.userId;
-    
+
     try {
         let user = await User.findById(userId);
-        
+
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
@@ -136,10 +138,29 @@ const createToken = (key) => { // Update to key from id
 
 async function createUser(req, res) {
     try {
-        const newUser = await User.create(req.body);
+
+        const {userName, emailID, code } = req.body;
+        const tempUser= await User.findOne({emailID: emailID});
+         // Validate OTP
+         if (!tempUser.code || tempUser.codeExpiry < Date.now()) {
+            return res.status(400).json({ message: "OTP expired. Please request a new one." });
+        }
+
+        if (tempUser.code !== code) {
+            return res.status(400).json({ message: "Invalid OTP. Please try again." });
+        }
+
+        // OTP is correct, proceed with login
+        tempUser.code = null;
+        tempUser.codeExpiry = null;
+        tempUser.isTemp=false;
+
+        // Save the user
+        await tempUser.save();
+
         // Create an associated wallet with an initial balance of 0
         const newWallet = new Wallet({
-            userId: newUser._id,  // Link the wallet to the newly created user
+            userId: tempUser._id,  // Link the wallet to the newly created user
             balance: 0,
             transactions: []
         });
@@ -149,8 +170,8 @@ async function createUser(req, res) {
        
 
         res.status(201).json({
-            userId: newUser._id, 
-            userName: newUser.userName
+            userId: tempUser._id, 
+            userName: tempUser.userName
         });
     } catch (error) {
         if (error.name === 'ValidationError') {
@@ -165,11 +186,12 @@ async function createUser(req, res) {
     }
 }
 
+
 async function createUserGoogle(req, res) {
     try {
 
-        const newUserGoogle=req.body;
-        newUserGoogle.isGoogle=true;
+        const newUserGoogle = req.body;
+        newUserGoogle.isGoogle = true;
 
         const newUser = await User.create(newUserGoogle);
         // Create an associated wallet with an initial balance of 0
@@ -181,10 +203,10 @@ async function createUserGoogle(req, res) {
 
         // Save the wallet
         await newWallet.save();
-        
+
 
         res.status(201).json({
-            userId: newUser._id, 
+            userId: newUser._id,
             userName: newUser.userName
         });
     } catch (error) {
@@ -192,7 +214,7 @@ async function createUserGoogle(req, res) {
             const errorMessages = Object.values(error.errors).map(err => err.message);
             return res.status(400).json({
                 message: "Validation error occurred",
-                errors: errorMessages 
+                errors: errorMessages
             });
         }
         console.error(error.message);
@@ -202,106 +224,150 @@ async function createUserGoogle(req, res) {
 
 
 async function updateUser(req, res) {
-    const userId = req.params.userId; 
-    const updatedUserData = req.body; 
+    const userId = req.params.userId;
+    const updatedUserData = req.body;
     try {
-        const user = await User.findById(userId); 
+        const user = await User.findById(userId);
 
         if (!user) {
-            return res.status(404).json({ error: 'User not found' }); 
+            return res.status(404).json({ error: 'User not found' });
         }
 
         user.userName = updatedUserData.userName || user.userName;
-        user.mobileNo = updatedUserData.mobileNo || user.mobileNo;
         user.emailID = updatedUserData.emailID || user.emailID;
-        user.password = updatedUserData.password || user.password;
 
         await user.save();
 
-        res.status(200).json(user); 
+        res.status(200).json(user);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal server error' });
     }
 }
 
+
+async function createTempUser(req, res){
+    try {
+        let tempUser;
+        const { userName, emailID } = req.body;
+        try {
+            const existingUser = await User.findOne({ emailID: emailID });
+            if (existingUser && existingUser.isTemp) {
+                tempUser = existingUser;
+            }
+          } catch (err) {
+            return res.status(500).json({ error: 'Error checking for existing user.' });
+          }
+
+        // If no temporary user exists, create a new one
+        if (!tempUser) {
+            tempUser = await User.create(req.body);
+            tempUser.isTemp = true;
+            await tempUser.save();
+        }
+
+        // If the user is created successfully, call the sendOtpSignUp API
+        if (tempUser) {
+            // Assuming the route is internal and accessible
+            await axios.post('https://eventticketbooking-cy6o.onrender.com/api/users/sendOtp', { emailID: tempUser.emailID, purpose: "Sign Up" });
+            return res.status(200).json({ message: "Temp user created and OTP sent." });
+        } else {
+            return res.status(400).json({ message: "Failed to create temp user." });
+        }
+    } catch (error) {
+        console.error("Error creating temp user or sending OTP:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
 async function deleteUser(req, res) {
-    const userId = req.params.userId; 
+    const userId = req.params.userId;
 
     try {
         const user = await User.findByIdAndDelete(userId);
         await Wallet.findOneAndDelete({ userId: userId });
         if (!user) {
-            return res.status(404).json({ error: 'User not found' }); 
+            return res.status(404).json({ error: 'User not found' });
         }
 
-        return res.status(204).end(); 
+        return res.status(204).end();
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ error: 'Internal server error' }); 
+        return res.status(500).json({ error: 'Internal server error' });
     }
 }
 
 async function validateLogin(req, res) {
-    const { mobile_email, password } = req.body;
-  
-    const mobileRegex = /^[0-9]{10}$/;        
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  
     try {
-        let user;
+        const { emailID, code } = req.body;
+        const user = await User.findOne({ emailID });
 
-        if (mobileRegex.test(mobile_email)) {
-            user = await User.loginWithMobile(mobile_email, password);
-        } else if (emailRegex.test(mobile_email)) {
-            user = await User.loginWithEmail(mobile_email, password);
-        } else {
-            return res.status(400).json({ message: 'Invalid mobile number or email format' });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
         }
 
+        if (user.isTemp) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Validate OTP
+        if (!user.code || user.codeExpiry < Date.now()) {
+            return res.status(400).json({ message: "OTP expired. Please request a new one." });
+        }
+
+        if (user.code !== code) {
+            return res.status(400).json({ message: "Invalid OTP. Please try again." });
+        }
+       
+        // OTP is correct, proceed with login
+        user.code = null;
+        user.codeExpiry = null;
+        await user.save();
+
         const token = createToken(user._id); // Ensure this is based on user._id
-        res.cookie('jwt', token, { 
-            httpOnly: true, 
-            secure: true, 
-            sameSite: 'None', // Allows cross-origin requests
-            maxAge: 2 * 60 * 60 * 1000 
+        res.cookie('jwt', token, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'None',
+            maxAge: 2 * 60 * 60 * 1000
         });
-        res.status(200).json({ 
+        res.status(200).json({
             userId: user._id,
-            user: user.userName 
+            user: user.userName
         });
 
-    } catch (err) {
-        console.error("Login Error: ", err.message || err);
-        res.status(400).json({ message: err.message || 'Invalid mobile number/email or password' });
+    } catch (error) {
+        console.error("Admin Login Error:", error.message);
+        res.status(500).json({ message: "Internal Server Error", error });
     }
-}
+};
+
 
 
 async function validateLoginGoogle(req, res) {
-    const { mobile_email, password } = req.body;
-  
+    const { emailID, password } = req.body;
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  
+
     try {
         let user;
 
-        if (emailRegex.test(mobile_email)) {
-            user = await User.loginWithGoogle(mobile_email, password);
+        if (emailRegex.test(emailID)) {
+            user = await User.loginWithGoogle(emailID, password);
         } else {
             return res.status(400).json({ message: 'Invalid email format' });
         }
 
         const token = createToken(user._id); // Ensure this is based on user._id
-        res.cookie('jwt', token, { 
-            httpOnly: true, 
-            secure: true, 
+        res.cookie('jwt', token, {
+            httpOnly: true,
+            secure: true,
             sameSite: 'None', // Allows cross-origin requests
-            maxAge: 2 * 60 * 60 * 1000 
+            maxAge: 2 * 60 * 60 * 1000
         });
-        res.status(200).json({ 
+        res.status(200).json({
             userId: user._id,
-            user: user.userName 
+            user: user.userName
         });
 
     } catch (err) {
@@ -312,16 +378,16 @@ async function validateLoginGoogle(req, res) {
 
 
 function logoutUser(req, res) {
-    res.cookie('jwt', '', { 
-        httpOnly: true, 
-        secure: true, 
-        sameSite: 'None', 
+    res.cookie('jwt', '', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'None',
         expires: new Date(0) // Set the expiration date to 1970 (Unix)
     });
     res.status(200).json({ message: 'Successfully logged out' }); // Send success message
 }
 
-async function validateAdminLogin(req, res){
+async function validateAdminLogin(req, res) {
     try {
         const { emailID, code } = req.body;
         const user = await User.findOne({ emailID });
@@ -343,20 +409,20 @@ async function validateAdminLogin(req, res){
         }
 
         // OTP is correct, proceed with login
-        user.code = null; 
+        user.code = null;
         user.codeExpiry = null;
         await user.save();
 
         const token = createToken(user._id); // Ensure this is based on user._id
-        res.cookie('jwt', token, { 
-            httpOnly: true, 
-            secure: true, 
+        res.cookie('jwt', token, {
+            httpOnly: true,
+            secure: true,
             sameSite: 'None',
-            maxAge: 2 * 60 * 60 * 1000 
+            maxAge: 2 * 60 * 60 * 1000
         });
-        res.status(200).json({ 
+        res.status(200).json({
             userId: user._id,
-            user: user.userName 
+            user: user.userName
         });
 
     } catch (error) {
@@ -366,43 +432,7 @@ async function validateAdminLogin(req, res){
 };
 
 
-async function forgotPassword(req, res){
-    const { emailID, code, newPassword } = req.body;
-  
-    try {
-
-      const user = await User.findOne({ emailID });
-  
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-  
-     
-      // Validate OTP
-      if (!user.code || user.codeExpiry < Date.now()) {
-        return res.status(400).json({ message: "OTP expired. Please request a new one." });
-    }
-
-    if (user.code !== code) {
-        return res.status(400).json({ message: "Invalid OTP. Please try again." });
-    }
-
-    // OTP is correct, proceed with login
-    user.code = null; 
-    user.codeExpiry = null;
-    
-      user.password = newPassword;
-      await user.save();
-  
-      return res.status(200).json({ message: 'Password has been reset successfully' });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ message: 'Server error, please try again later' });
-    }
-  };
-
-
-  async function makeAdmin(req, res){
+async function makeAdmin(req, res) {
     const userId = req.params.userId;
     const { adminUserId } = req.body;
     try {
@@ -411,24 +441,24 @@ async function forgotPassword(req, res){
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
-          }
-
-          if (!adminUser) {
-            return res.status(404).json({ message: 'Admin User not found' });
-          }
-
-        if(!adminUser.roles.includes(2)){
-            return res.status(403).json({ message: 'You are not authorized to update this user, You are not Admin'})
         }
 
-        if(user.roles.includes(2)){
-            return res.status(400).json({ message: 'The User is already an Admin'})
+        if (!adminUser) {
+            return res.status(404).json({ message: 'Admin User not found' });
+        }
+
+        if (!adminUser.roles.includes(2)) {
+            return res.status(403).json({ message: 'You are not authorized to update this user, You are not Admin' })
+        }
+
+        if (user.roles.includes(2)) {
+            return res.status(400).json({ message: 'The User is already an Admin' })
         }
 
         user.roles.addToSet(2);
         await user.save();
 
-        return res.status(200).json({ message: 'User has been updated successfully to Admin'});
+        return res.status(200).json({ message: 'User has been updated successfully to Admin' });
 
     } catch (error) {
         console.error(error);
@@ -437,37 +467,73 @@ async function forgotPassword(req, res){
 }
 
 
-    async function makeOrg(req, res){
-        const userId = req.params.userId;
-        const { adminUserId } = req.body;
-        try {
-            const user = await User.findById(userId);
-            const adminUser = await User.findById(adminUserId);
-    
-            if (!user) {
-                return res.status(404).json({ message: 'User not found' });
-              }
-    
-              if (!adminUser) {
-                return res.status(404).json({ message: 'Admin User not found' });
-              }
-    
-            if(!adminUser.roles.includes(2)){
-                return res.status(403).json({ message: 'You are not authorized to update this user, You are not Admin'})
-            }
-    
-            if(user.roles.includes(1)){
-                return res.status(400).json({ message: 'The User is already an Organizer for a specific Event'})
-            }
-    
-            user.roles.addToSet(1);
-            await user.save();
-    
-            return res.status(200).json({ message: 'User has been updated successfully to Organizer'});
-    
-        } catch (error) {
-            console.error(error);
-            return res.status(500).json({ message: 'Server error, please try again later' });
+async function removeAdmin(req, res) {
+    const userId = req.params.userId;
+    const { adminUserId } = req.body;
+
+    try {
+        const user = await User.findById(userId);
+        const adminUser = await User.findById(adminUserId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
         }
+
+        if (!adminUser) {
+            return res.status(404).json({ message: 'Admin User not found' });
+        }
+
+        if (!adminUser.roles.includes(2)) {
+            return res.status(403).json({ message: 'You are not authorized to update this user, You are not Admin' });
+        }
+
+        if (!user.roles.includes(2)) {
+            return res.status(400).json({ message: 'The User is already NOT an Admin' });
+        }
+
+        user.roles.pull(2);
+
+        await user.save();
+
+        return res.status(200).json({ message: 'User has been successfully updated and removed as Admin' });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error, please try again later' });
     }
-  
+}
+
+
+async function makeOrg(req, res) {
+    const userId = req.params.userId;
+    const { adminUserId } = req.body;
+    try {
+        const user = await User.findById(userId);
+        const adminUser = await User.findById(adminUserId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (!adminUser) {
+            return res.status(404).json({ message: 'Admin User not found' });
+        }
+
+        if (!adminUser.roles.includes(2)) {
+            return res.status(403).json({ message: 'You are not authorized to update this user, You are not Admin' })
+        }
+
+        if (user.roles.includes(1)) {
+            return res.status(400).json({ message: 'The User is already an Organizer for a specific Event' })
+        }
+
+        user.roles.addToSet(1);
+        await user.save();
+
+        return res.status(200).json({ message: 'User has been updated successfully to Organizer' });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error, please try again later' });
+    }
+}

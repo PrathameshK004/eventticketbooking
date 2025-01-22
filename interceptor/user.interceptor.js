@@ -7,15 +7,16 @@ const validator = require('validator');
 const app = express();
 app.use(bodyParser.json());
 module.exports = {
-  checkLogin: checkLogin,
-  validateUserId: validateUserId,
-  validateNewUserGoogle: validateNewUserGoogle,
-  validateNewUser: validateNewUser,
-  validateUpdateUser: validateUpdateUser,
-  checkAdminLogin: checkAdminLogin,
-  checkForgotPassword: checkForgotPassword,
-  validateOtpReq: validateOtpReq,
-  validateAdmin:validateAdmin
+  checkLogin,
+  checkLoginGoogle,
+  validateUserId,
+  validateNewUserGoogle,
+  validateNewUser,
+  validateUpdateUser,
+  checkAdminLogin,
+  validateOtpReq,
+  validateAdmin,
+  validateNewTempUser
 
 }
 
@@ -36,49 +37,22 @@ function validateUserId(req, res, next) {
   next();
 }
 
-
-
 async function validateNewUser(req, res, next) {
 
-  const { userName, mobileNo, emailID, password } = req.body;
+  const { userName, emailID, code } = req.body;
 
-  if (!userName || !password || !emailID) {
-    return res.status(400).json({ error: 'UserName, Email and password are required fields.' });
+  if (!userName || !code || !emailID) {
+    return res.status(400).json({ error: 'UserName, Email and OTP are required fields.' });
   }
-
-  if (mobileNo) {
-    const mobileRegex = /^[0-9]{10}$/;
-    if (!mobileRegex.test(mobileNo)) {
-      return res.status(400).json({ error: 'Invalid Mobile Number. It should be 10 digits.' });
-    }
-  }
-
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(emailID)) {
     return res.status(400).json({ error: 'Invalid email format.' });
   }
 
-
-  if (password.length < 8) {
-    return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
-  }
-
-
-  if (mobileNo) {
-    try {
-      const existingUser = await User.findOne({ mobileNo: mobileNo });
-      if (existingUser) {
-        return res.status(400).json({ error: 'Mobile Number already exist.' });
-      }
-    } catch (err) {
-      return res.status(500).json({ error: 'Error checking for existing user.' });
-    }
-  }
-
   try {
     const existingUser = await User.findOne({ emailID: emailID });
-    if (existingUser) {
+    if (existingUser && !existingUser.isTemp) {
       return res.status(400).json({ error: 'Email already exist.' });
     }
   } catch (err) {
@@ -88,43 +62,34 @@ async function validateNewUser(req, res, next) {
   next();
 }
 
+async function validateNewTempUser(req, res, next) {
 
-async function validateNewUserGoogle(req, res, next) {
+  const { userName, emailID } = req.body;
 
-  const { userName, mobileNo, emailID, passwordGoogle } = req.body;
-
-  if (!userName || !passwordGoogle || !emailID) {
-    return res.status(400).json({ error: 'UserName, Email and password are required fields.' });
+  if (!userName || !emailID) {
+    return res.status(400).json({ error: 'UserName and Email are required fields.' });
   }
-
-  if (mobileNo) {
-    const mobileRegex = /^[0-9]{10}$/;
-    if (!mobileRegex.test(mobileNo)) {
-      return res.status(400).json({ error: 'Invalid Mobile Number. It should be 10 digits.' });
-    }
-  }
-
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(emailID)) {
     return res.status(400).json({ error: 'Invalid email format.' });
   }
 
+  next();
+}
 
-  if (passwordGoogle.length < 8) {
-    return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+
+async function validateNewUserGoogle(req, res, next) {
+
+  const { userName, emailID, passwordGoogle } = req.body;
+
+  if (!userName || !passwordGoogle || !emailID) {
+    return res.status(400).json({ error: 'UserName, Email and password are required fields.' });
   }
 
-
-  if (mobileNo) {
-    try {
-      const existingUser = await User.findOne({ mobileNo: mobileNo });
-      if (existingUser) {
-        return res.status(400).json({ error: 'Mobile Number already exist.' });
-      }
-    } catch (err) {
-      return res.status(500).json({ error: 'Error checking for existing user.' });
-    }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(emailID)) {
+    return res.status(400).json({ error: 'Invalid email format.' });
   }
 
   try {
@@ -140,21 +105,7 @@ async function validateNewUserGoogle(req, res, next) {
 }
 
 async function validateUpdateUser(req, res, next) {
-  const { userName, mobileNo, emailID } = req.body;
-
-  // If the client tries to update 'userName', 'mobileNo', or 'emailID', validate them
-
-  if (mobileNo) {
-    const mobileRegex = /^[0-9]{10}$/;
-    if (!mobileRegex.test(mobileNo)) {
-      return res.status(400).json({ error: 'Invalid Mobile Number. It should be 10 digits.' });
-    }
-
-    const existingUser = await User.findOne({ mobileNo });
-    if (existingUser && existingUser._id.toString() !== req.params.userId) {
-      return res.status(400).json({ error: 'Mobile Number already exists.' });
-    }
-  }
+  const { userName, emailID } = req.body;
 
   if (emailID) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -171,17 +122,28 @@ async function validateUpdateUser(req, res, next) {
 }
 
 
+function checkLoginGoogle(req, res, next) {
 
+  const { emailID, password } = req.body;
 
-function checkLogin(req, res, next) {
-
-  const { mobile_email, password } = req.body;
-
-  if (!password || !mobile_email) {
-    return res.status(400).json({ error: 'Mobile Number / Email and password are required fields.' });
+  if (!password || !emailID) {
+    return res.status(400).json({ error: 'Email and password are required fields.' });
   }
   if (password < 8) {
     return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+  }
+  next();
+}
+
+function checkLogin(req, res, next) {
+
+  const { emailID, code } = req.body;
+
+  if (!code || !emailID) {
+    return res.status(400).json({ error: 'Email and OTP are required fields.' });
+  }
+  if (code.toString().length !== 4) {
+    return res.status(400).json({ error: 'OTP must be 4 digits.' });
   }
   next();
 }
@@ -200,21 +162,6 @@ function checkAdminLogin(req, res, next) {
   next();
 }
 
-function checkForgotPassword(req, res, next) {
-
-  const { emailID, code, newPassword } = req.body;
-
-  if (!code || !emailID || !newPassword) {
-    return res.status(400).json({ error: 'Email, Password and OTP are required fields.' });
-  }
-  if (code.toString().length !== 4) {
-    return res.status(400).json({ error: 'OTP must be 4 digits.' });
-  }
-  if (newPassword < 8) {
-    return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
-  }
-  next();
-}
 
 function validateOtpReq(req, res, next) {
   const { emailID, purpose } = req.body;
@@ -231,9 +178,9 @@ function validateOtpReq(req, res, next) {
     return res.status(400).json({ error: 'Purpose must be a string.' });
   }
 
-  const validPurposes = ["AdminLogin", "ForgotPassword"];
+  const validPurposes = ["Admin Login", "Sign In","Sign Up"];
   if (!validPurposes.includes(purpose)) {
-    return res.status(400).json({ error: 'Purpose must be "AdminLogin" or "ForgotPassword".' });
+    return res.status(400).json({ error: 'Purpose must be "AdminLogin", "Sign In" or "Sign Up".' });
   }
 
   next(); 
