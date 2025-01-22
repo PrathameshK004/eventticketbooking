@@ -173,7 +173,7 @@ async function updateEvent(req, res) {
 
     try {
         // MongoDB client connection
-        client = await MongoClient.connect(process.env.CONNECTIONSTRING, { useNewUrlParser: true, useUnifiedTopology: true });
+        client = await MongoClient.connect(process.env.CONNECTIONSTRING, { useUnifiedTopology: true });
         const db = client.db('eventticketbooking'); 
 
         // Update event data
