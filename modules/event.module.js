@@ -28,7 +28,7 @@ const eventSchema = new mongoose.Schema({
     eventOrgX: { type: String, trim: true },
     eventOrgFacebook: { type: String, trim: true },
     fileId: {type: String}
-});
+}, { versionKey: false });
 
 eventSchema.methods.toJSON = function() {
     const event = this.toObject();
