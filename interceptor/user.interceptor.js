@@ -14,7 +14,9 @@ module.exports = {
   validateUpdateUser: validateUpdateUser,
   checkAdminLogin: checkAdminLogin,
   checkForgotPassword: checkForgotPassword,
-  validateOtpReq: validateOtpReq
+  validateOtpReq: validateOtpReq,
+  validateAdmin:validateAdmin
+
 }
 
 
@@ -235,4 +237,23 @@ function validateOtpReq(req, res, next) {
   }
 
   next(); 
+}
+
+
+async function validateAdmin(req, res, next){
+  const userId=req.params.userId;
+  const { adminUserId } = req.body;
+
+  if(!userId){
+    return res.status(400).json({ error: "User ID is Required"});
+  }
+  if(!isUuidValid(userId)){
+    return res.status(400).json({ error: "Invalid userId. Please provide a valid UUID."});
+  }
+  if(!adminUserId || !isUuidValid(adminUserId)){
+    return res.status(403).json({ error: "Admin UserId is not Valid."});
+  }
+
+
+  next();
 }

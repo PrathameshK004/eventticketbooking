@@ -20,6 +20,8 @@ router.delete('/:userId', verifyToken, userInterceptor.validateUserId, usersCont
 router.post("/sendOtp", userInterceptor.validateOtpReq, usersController.sendOTP);
 router.post('/login/admin', userInterceptor.checkAdminLogin, usersController.validateAdminLogin);
 router.post("/forgotPassword", userInterceptor.checkForgotPassword, usersController.forgotPassword);
+router.post('/makeAdmin/:userId',verifyToken, userInterceptor.validateAdmin, usersController.makeAdmin);
+router.post('/makeOrganizer/:userId',verifyToken, userInterceptor.validateAdmin, usersController.makeOrg);
 
 module.exports = router;
 
