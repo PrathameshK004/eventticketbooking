@@ -171,16 +171,16 @@ async function updateEvent(req, res) {
     const updatedEventData = req.body;
 
     try {
+        // First, update event data in the database
         const event = await Event.findByIdAndUpdate(
             eventId,
             { $set: updatedEventData }, // Apply the updates
             { new: true, runValidators: true } // Get the updated document
         );
-        
+
         if (!event) {
             return res.status(404).json({ error: 'Event not found' });
         }
-        
 
         // If a new file is uploaded, handle the file update
         if (req.file) {
@@ -200,19 +200,18 @@ async function updateEvent(req, res) {
 
             // On file upload success, retrieve file metadata
             try {
-                // Connect to MongoDB
-                const db = client.db('eventticketbooking'); 
-                const filesCollection = db.collection('uploads.files'); // The collection where GridFS stores file metadata
+                // Connect to MongoDB and retrieve the file metadata
+                const db = client.db('eventticketbooking');
+                const filesCollection = db.collection('uploads.files'); // GridFS metadata collection
 
-                // Query the fs.files collection to find the file by its filename
+                // Query to find the file by its filename
                 const uploadedFile = await filesCollection.findOne({ filename: newFileName });
 
-                // If no file found, return a 404 error
                 if (!uploadedFile) {
                     return res.status(404).json({ error: 'File not found.' });
                 }
 
-                // Send file metadata as a response
+                // Extract file metadata
                 const fileMetadata = {
                     _id: uploadedFile._id,
                     chunkSize: uploadedFile.chunkSize,
@@ -222,23 +221,23 @@ async function updateEvent(req, res) {
                     uploadDate: uploadedFile.uploadDate,
                 };
 
+                // Update event with the new file metadata
                 event.fileId = fileMetadata._id;
-
-                // Construct image URL based on the file _id
-                imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
-
-                // Update the event document with the fileId and imageUrl
+                const imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
                 event.imageUrl = imageUrl;
-                await event.save();
 
-                res.status(201).json({ event: event, fileMetadata });
+                await event.save(); // Save the updated event with the new file data
+
+                // Send response after event and file update are completed
+                return res.status(201).json({ event, fileMetadata });
+
             } catch (err) {
                 console.error('Error retrieving file info:', err);
-                res.status(500).json({ error: 'Error retrieving file info from the database.' });
+                return res.status(500).json({ error: 'Error retrieving file info from the database.' });
             } finally {
-                await client.close(); // Close MongoDB connection after the operation
+                await client.close(); // Close MongoDB connection
             }
-        };
+        }
 
         // Handle optional updates for eventFeatures and eventTags
         if (updatedEventData.eventFeatures !== undefined) {
@@ -268,16 +267,17 @@ async function updateEvent(req, res) {
             }
         }
 
-        await event.save();
+        await event.save(); // Save the final updated event data
 
         // Respond with the updated event data
-        res.status(200).json({
+        return res.status(200).json({
             event,
             message: req.file ? 'Event updated with new image successfully!' : 'Event updated successfully!',
         });
+
     } catch (err) {
         console.error('Error updating event:', err);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
     }
 }
 
