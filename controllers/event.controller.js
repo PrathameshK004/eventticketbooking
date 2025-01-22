@@ -108,8 +108,7 @@ async function createEvent(req, res) {
                 // Now that we have uploaded the file, retrieve its metadata
                 try {
                     // Connect to MongoDB
-                    await client.connect();
-                    const db = client.db();  // Replace with your database name
+                    const db = mongoose.connection.db;  // Replace with your database name
                     const filesCollection = db.collection('uploads.files'); // The collection where GridFS stores file metadata
 
                     // Query the fs.files collection to find the file by its filename
