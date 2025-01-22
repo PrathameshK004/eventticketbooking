@@ -203,7 +203,7 @@ async function updateEvent(req, res) {
             const uploadedFile = await new Promise((resolve, reject) => {
                 uploadStream.on('finish', async (file) => {
                     try {
-                        const db = client.db(); // Replace with your database name
+                        const db = mongoose.connection.db; // Replace with your database name
                         const filesCollection = db.collection('uploads.files');
                         const fileMetadata = await filesCollection.findOne({ filename: newFileName });
 
