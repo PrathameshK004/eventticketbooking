@@ -164,12 +164,6 @@ async function createEvent(req, res) {
     }
 }
 
-
-
-const mongoose = require('mongoose');
-const { ObjectId } = mongoose.Types;
-const path = require('path');
-
 async function updateEvent(req, res) {
     const eventId = req.params.eventId;
     const updatedEventData = req.body;
