@@ -165,12 +165,18 @@ async function createEvent(req, res) {
 
 
 
-// Update event
 async function updateEvent(req, res) {
     const eventId = req.params.eventId;
     const updatedEventData = req.body;
 
+    let client;
+
     try {
+        // MongoDB client connection
+        client = await MongoClient.connect(process.env.CONNECTIONSTRING, { useNewUrlParser: true, useUnifiedTopology: true });
+        const db = client.db('eventticketbooking'); 
+
+        // Update event data
         const event = await Event.findByIdAndUpdate(
             eventId,
             { $set: updatedEventData }, // Apply the updates
@@ -180,85 +186,66 @@ async function updateEvent(req, res) {
         if (!event) {
             return res.status(404).json({ error: 'Event not found' });
         }
-        
 
-        // If a new file is uploaded, handle the file update
+        // Handle file upload if a new file is provided
         if (req.file) {
-            // Delete the old file from GridFS, if one exists
+            // Delete the old file from GridFS if it exists
             if (event.fileId) {
-                await bucket.delete(ObjectId(event.fileId));
+                try {
+                    await bucket.delete(ObjectId(event.fileId));
+                } catch (err) {
+                    console.error('Error deleting old file:', err);
+                }
             }
 
+            // Prepare for file upload
             const fileExtension = path.extname(req.file.originalname);
             const newFileName = `${eventId}${fileExtension}`;
-
             const uploadStream = bucket.openUploadStream(newFileName, {
                 contentType: req.file.mimetype,
             });
 
             uploadStream.end(req.file.buffer);
 
-            // On file upload success, retrieve file metadata
-            try {
-                // Connect to MongoDB
-                const db = client.db('eventticketbooking'); 
-                const filesCollection = db.collection('uploads.files'); // The collection where GridFS stores file metadata
+            // On successful file upload, retrieve file metadata
+            const filesCollection = db.collection('uploads.files');
+            const uploadedFile = await filesCollection.findOne({ filename: newFileName });
 
-                // Query the fs.files collection to find the file by its filename
-                const uploadedFile = await filesCollection.findOne({ filename: newFileName });
-
-                // If no file found, return a 404 error
-                if (!uploadedFile) {
-                    return res.status(404).json({ error: 'File not found.' });
-                }
-
-                // Send file metadata as a response
-                const fileMetadata = {
-                    _id: uploadedFile._id,
-                    chunkSize: uploadedFile.chunkSize,
-                    contentType: uploadedFile.contentType,
-                    filename: uploadedFile.filename,
-                    length: uploadedFile.length,
-                    uploadDate: uploadedFile.uploadDate,
-                };
-
-                event.fileId = fileMetadata._id;
-
-                // Construct image URL based on the file _id
-                imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
-
-                // Update the event document with the fileId and imageUrl
-                event.imageUrl = imageUrl;
-                await event.save();
-
-                res.status(201).json({ event: event, fileMetadata });
-            } catch (err) {
-                console.error('Error retrieving file info:', err);
-                res.status(500).json({ error: 'Error retrieving file info from the database.' });
-            } finally {
-                await client.close(); // Close MongoDB connection after the operation
+            if (!uploadedFile) {
+                return res.status(404).json({ error: 'File not found.' });
             }
-        };
+
+            const fileMetadata = {
+                _id: uploadedFile._id,
+                chunkSize: uploadedFile.chunkSize,
+                contentType: uploadedFile.contentType,
+                filename: uploadedFile.filename,
+                length: uploadedFile.length,
+                uploadDate: uploadedFile.uploadDate,
+            };
+
+            // Update event with new file metadata
+            event.fileId = fileMetadata._id;
+
+            // Construct the image URL based on the file _id
+            const imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
+            event.imageUrl = imageUrl;
+
+            // Save the updated event with the new file information
+            await event.save();
+        }
 
         // Handle optional updates for eventFeatures and eventTags
         if (updatedEventData.eventFeatures !== undefined) {
-            if (typeof updatedEventData.eventFeatures === 'string') {
-                event.eventFeatures = updatedEventData.eventFeatures
-                    .split(',')
-                    .map((feature) => feature.trim());
-            } else {
-                event.eventFeatures = updatedEventData.eventFeatures;
-            }
+            event.eventFeatures = typeof updatedEventData.eventFeatures === 'string'
+                ? updatedEventData.eventFeatures.split(',').map((feature) => feature.trim())
+                : updatedEventData.eventFeatures;
         }
 
         if (updatedEventData.eventTags !== undefined) {
-            if (typeof updatedEventData.eventTags === 'string') {
-                event.eventTags = updatedEventData.eventTags
-                    .split(',')
-                    .map((tag) => tag.trim());
-            } else {
-                event.eventTags = updatedEventData.eventTags;
-            }
+            event.eventTags = typeof updatedEventData.eventTags === 'string'
+                ? updatedEventData.eventTags.split(',').map((tag) => tag.trim())
+                : updatedEventData.eventTags;
         }
 
         // Update other fields dynamically
@@ -278,6 +265,10 @@ async function updateEvent(req, res) {
     } catch (err) {
         console.error('Error updating event:', err);
         res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        if (client) {
+            await client.close(); // Close MongoDB connection after the operation
+        }
     }
 }
 
