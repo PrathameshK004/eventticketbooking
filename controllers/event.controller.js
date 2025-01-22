@@ -108,7 +108,7 @@ async function createEvent(req, res) {
                 // Now that we have uploaded the file, retrieve its metadata
                 try {
                     // Connect to MongoDB
-                    const db = mongoose.connection.db;  // Replace with your database name
+                    const db = client.db('eventticketbooking'); 
                     const filesCollection = db.collection('uploads.files'); // The collection where GridFS stores file metadata
 
                     // Query the fs.files collection to find the file by its filename
@@ -202,7 +202,7 @@ async function updateEvent(req, res) {
             const uploadedFile = await new Promise((resolve, reject) => {
                 uploadStream.on('finish', async (file) => {
                     try {
-                        const db = mongoose.connection.db; // Replace with your database name
+                        const db = client.db('eventticketbooking'); 
                         const filesCollection = db.collection('uploads.files');
                         const fileMetadata = await filesCollection.findOne({ filename: newFileName });
 
