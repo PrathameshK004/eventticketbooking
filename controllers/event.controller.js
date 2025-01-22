@@ -220,6 +220,7 @@ async function updateEvent(req, res) {
                 uploadStream.on('error', (err) => reject(err));
             });
 
+            event.fileId = uploadedFile._id;
             event.imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
         }
 
