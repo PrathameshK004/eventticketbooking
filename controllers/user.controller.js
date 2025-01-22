@@ -255,6 +255,9 @@ async function createTempUser(req, res){
             if (existingUser && existingUser.isTemp) {
                 tempUser = existingUser;
             }
+            if (existingUser && !existingUser.isTemp) {
+                return res.status(400).json({ error: 'User already exists' });
+            }
           } catch (err) {
             return res.status(500).json({ error: 'Error checking for existing user.' });
           }

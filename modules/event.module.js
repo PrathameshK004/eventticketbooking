@@ -26,7 +26,8 @@ const eventSchema = new mongoose.Schema({
     eventTags: [{ type: String, trim: true }],
     eventOrgInsta: { type: String, trim: true },
     eventOrgX: { type: String, trim: true },
-    eventOrgFacebook: { type: String, trim: true }
+    eventOrgFacebook: { type: String, trim: true },
+    fileId: {type: String}
 });
 
 eventSchema.methods.toJSON = function() {
