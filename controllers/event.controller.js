@@ -200,7 +200,7 @@ async function updateEvent(req, res) {
 
             // Delete the old file from GridFS, if one exists
             if (event.fileId) {
-                await bucket.delete(ObjectId(event.fileId));
+                await bucket.delete(new ObjectId(event.fileId));
             }
 
             const fileExtension = path.extname(req.file.originalname);
@@ -292,7 +292,7 @@ async function deleteEvent(req, res) {
 
         // If there's an associated file, delete it from GridFS
         if (event.fileId) {
-            await bucket.delete(ObjectId(event.fileId));
+            await bucket.delete(new ObjectId(event.fileId));
         }
 
         return res.status(204).end();
