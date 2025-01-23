@@ -106,13 +106,14 @@ async function sendOTP(req, res) {
 
 
 function getAllUsers(req, res) {
-    User.find()
+    User.find({ isTemp: false }) 
         .then(users => res.status(200).json(users))
         .catch(err => {
-            console.error(err.message);
+            console.error("Error fetching users:", err.message);
             res.status(500).json({ error: 'Failed to fetch users' });
         });
 }
+
 
 async function getUserById(req, res) {
     let userId = req.params.userId;
@@ -120,7 +121,7 @@ async function getUserById(req, res) {
     try {
         let user = await User.findById(userId);
 
-        if (!user) {
+        if (!user || user.isTemp) {
             return res.status(404).json({ message: "User not found" });
         }
 
