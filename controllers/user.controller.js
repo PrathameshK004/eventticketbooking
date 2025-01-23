@@ -199,14 +199,16 @@ async function createUserGoogle(req, res) {
         if (newUser) {
            
             if (newUser.isTemp) {
+                newUser.userName = req.body.userName;
                 newUser.isGoogle = true;
                 newUser.isTemp = false;
+                newUser.imageUrl =req.body.imageUrl;
                 newUser.passwordGoogle = req.body.passwordGoogle; 
                 await newUser.save(); 
             } else {
                
                 return res.status(400).json({
-                    message: "User already exists, and is not temporary. Please login with your credentials."
+                    message: "User already exists. Please login with your credentials."
                 });
             }
         } else {
