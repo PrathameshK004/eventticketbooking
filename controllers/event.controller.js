@@ -52,16 +52,14 @@ async function getEventById(req, res) {
     }
 }
 
-
 async function createEvent(req, res) {
     try {
+        let fileId = null;
         let imageUrl = null;
 
-        // Directly use eventFeatures and eventTags as arrays from the request body
         let eventFeatures = req.body.eventFeatures || [];
         let eventTags = req.body.eventTags || [];
 
-        // Create a new event object
         const eventDetails = {
             eventTitle: req.body.eventTitle,
             eventDate: new Date(req.body.eventDate),
@@ -73,16 +71,14 @@ async function createEvent(req, res) {
             eventRating: req.body.eventRating ? parseFloat(req.body.eventRating) : undefined,
             eventCapacity: parseInt(req.body.eventCapacity),
             eventDuration: req.body.eventDuration,
-            eventFeatures: eventFeatures,  // Directly use eventFeatures array
-            eventTags: eventTags,  // Directly use eventTags array
+            eventFeatures: eventFeatures,
+            eventTags: eventTags,
             eventOrgInsta: req.body.eventOrgInsta,
             eventOrgX: req.body.eventOrgX,
             eventOrgFacebook: req.body.eventOrgFacebook
         };
 
-        // Save the new event to the database
         const newEvent = await Event.create(eventDetails);
-
         if (!newEvent || !newEvent._id) {
             return res.status(500).json({ error: 'Failed to create event' });
         }
@@ -90,75 +86,49 @@ async function createEvent(req, res) {
         // Handle file upload if a file is present
         if (req.file) {
             const fileExtension = path.extname(req.file.originalname);
-            const newFileName = `${newEvent._id}${fileExtension}`; // Naming the file with the eventId
+            const newFileName = `${newEvent._id}${fileExtension}`;
 
-            // Upload the file to GridFS
-            const uploadStream = bucket.openUploadStream(newFileName, {
-                contentType: req.file.mimetype,
-            });
-            uploadStream.end(req.file.buffer);
+            // Upload file to GridFS and get the fileId
+            try {
+                const fileUploadResult = await new Promise((resolve, reject) => {
+                    const uploadStream = bucket.openUploadStream(newFileName, {
+                        contentType: req.file.mimetype,
+                    });
+                    uploadStream.end(req.file.buffer);
 
-            // On file upload success, get the file's _id
-            uploadStream.on('finish', async (file) => {
-                console.log('File uploaded successfully:', file);
+                    uploadStream.on('finish', async (file) => {
+                        console.log('File uploaded successfully:', file);
+                        resolve(file._id);
+                    });
 
-                // Now that we have uploaded the file, retrieve its metadata
-                try {
-                    // Connect to MongoDB
-                    const db = client.db('eventticketbooking'); 
-                    const filesCollection = db.collection('uploads.files'); // The collection where GridFS stores file metadata
+                    uploadStream.on('error', (err) => {
+                        console.error('Upload failed:', err);
+                        reject(err);
+                    });
+                });
 
-                    // Query the fs.files collection to find the file by its filename
-                    const uploadedFile = await filesCollection.findOne({ filename: newFileName });
+                fileId = fileUploadResult;
+                imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
 
-                    // If no file found, return a 404 error
-                    if (!uploadedFile) {
-                        return res.status(404).json({ error: 'File not found.' });
-                    }
-
-                    // Send file metadata as a response
-                    const fileMetadata = {
-                        _id: uploadedFile._id,
-                        chunkSize: uploadedFile.chunkSize,
-                        contentType: uploadedFile.contentType,
-                        filename: uploadedFile.filename,
-                        length: uploadedFile.length,
-                        uploadDate: uploadedFile.uploadDate,
-                    };
-
-                    newEvent.fileId = fileMetadata._id;
-
-                    // Construct image URL based on the file _id
-                    imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
-
-                    // Update the event document with the fileId and imageUrl
-                    newEvent.imageUrl = imageUrl;
-                    await newEvent.save();
-
-                    // Respond with the created event and file details
-                    res.status(201).json({ event: newEvent, fileMetadata });
-                } catch (err) {
-                    console.error('Error retrieving file info:', err);
-                    res.status(500).json({ error: 'Error retrieving file info from the database.' });
-                } finally {
-                    await client.close(); // Close MongoDB connection after the operation
-                }
-            });
-
-            // Handle upload failure
-            uploadStream.on('error', (err) => {
-                console.error('Upload failed:', err);
-                res.status(500).json({ error: 'File upload failed.' });
-            });
-        } else {
-            // If no file is uploaded, return the event without file info
-            res.status(201).json(newEvent);
+                // Update event with fileId and imageUrl
+                newEvent.fileId = fileId;
+                newEvent.imageUrl = imageUrl;
+                await newEvent.save();
+            } catch (uploadError) {
+                console.error('Error uploading file:', uploadError);
+                return res.status(500).json({ error: 'File upload failed.' });
+            }
         }
+
+        // Respond with the created event details
+        res.status(201).json(newEvent);
     } catch (error) {
         console.error('Error creating event:', error);
         res.status(500).json({ error: 'Failed to create event', details: error.message });
     }
 }
+
+
 
 async function connectDB() {
     if (!client.topology || !client.topology.isConnected()) {
@@ -166,6 +136,7 @@ async function connectDB() {
         console.log("MongoDB connected successfully.");
     }
 }
+
 
 // Update event
 async function updateEvent(req, res) {
@@ -179,6 +150,7 @@ async function updateEvent(req, res) {
             { $set: updatedEventData }, // Apply the updates
             { new: true, runValidators: true } // Get the updated document
         );
+
 
         const eventForId = await Event.findById(eventId);
 
@@ -247,7 +219,7 @@ async function updateEvent(req, res) {
         if (updatedEventData.eventFeatures !== undefined) {
             if (typeof updatedEventData.eventFeatures === 'string') {
                 event.eventFeatures = updatedEventData.eventFeatures
-                    .split(',') 
+                    .split(',')
                     .map((feature) => feature.trim());
             } else {
                 event.eventFeatures = updatedEventData.eventFeatures;
@@ -284,8 +256,6 @@ async function updateEvent(req, res) {
         return res.status(500).json({ error: 'Internal server error' });
     }
 }
-
-module.exports = { createEvent, updateEvent, connectDB };
 
 
 // Delete event
