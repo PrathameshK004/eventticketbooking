@@ -129,14 +129,6 @@ async function createEvent(req, res) {
 }
 
 
-
-async function connectDB() {
-    if (!client.topology || !client.topology.isConnected()) {
-        await client.connect();
-        console.log("MongoDB connected successfully.");
-    }
-}
-
 async function updateEvent(req, res) {
     const eventId = req.params.eventId;
     const updatedEventData = req.body;
