@@ -23,7 +23,8 @@ const allowedOrigins = [
   'http://localhost:4200', 
   'http://localhost:8100', 
   'https://eventhorizondashboard.web.app',
-  'https://localhost'
+  'https://localhost',
+  'https://eventticketbooking-cy6o.onrender.com'
   
 ];
 
