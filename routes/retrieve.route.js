@@ -7,10 +7,7 @@ require('dotenv').config();
 
 // MongoDB URI
 const mongoURI = process.env.CONNECTIONSTRING;
-const conn = mongoose.createConnection(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+const conn = mongoose.createConnection(mongoURI, {});
 
 let bucket;
 
