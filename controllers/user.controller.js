@@ -201,6 +201,7 @@ async function createUserGoogle(req, res) {
         if(newUser && newUser.isTemp){
             newUser.isGoogle =true;
             newUser.isTemp =false;
+            newUser.passwordGoogle=req.body.password;
         }
         else{
             newUser = await User.create(newUserGoogle);
