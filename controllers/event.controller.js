@@ -178,7 +178,10 @@ async function updateEvent(req, res) {
             { new: true, runValidators: true } // Get the updated document
         );
 
-        if (!event) {
+
+        const eventForId = await Event.findById(eventId);
+
+        if (!event || !eventForId) {
             return res.status(404).json({ error: 'Event not found' });
         }
 
@@ -222,7 +225,7 @@ async function updateEvent(req, res) {
                 };
 
                 // Update event with the new file metadata
-                event.fileId = fileMetadata._id;
+                eventForId.fileId = fileMetadata._id;
                 const imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
                 event.imageUrl = imageUrl;
 
