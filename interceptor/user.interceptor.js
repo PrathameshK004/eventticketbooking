@@ -94,7 +94,7 @@ async function validateNewUserGoogle(req, res, next) {
 
   try {
     const existingUser = await User.findOne({ emailID: emailID });
-    if (existingUser) {
+    if (existingUser && !existingUser.isTemp) {
       return res.status(400).json({ error: 'Email already exist.' });
     }
   } catch (err) {
