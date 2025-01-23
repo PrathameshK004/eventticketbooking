@@ -193,11 +193,20 @@ async function createUser(req, res) {
 
 async function createUserGoogle(req, res) {
     try {
-
+        const newUser =null;
         const newUserGoogle = req.body;
         newUserGoogle.isGoogle = true;
 
-        const newUser = await User.create(newUserGoogle);
+        newUser = await User.findOne({emailID: req.body.emailID});
+        if(newUser && newUser.isTemp){
+            newUser.isGoogle =true;
+            newUser.isTemp =false;
+        }
+        else{
+            newUser = await User.create(newUserGoogle);
+        }
+
+       
         // Create an associated wallet with an initial balance of 0
         const newWallet = new Wallet({
             userId: newUser._id,  // Link the wallet to the newly created user
