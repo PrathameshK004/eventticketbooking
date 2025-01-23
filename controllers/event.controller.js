@@ -52,17 +52,14 @@ async function getEventById(req, res) {
     }
 }
 
-// Create a new event with file upload
+
 async function createEvent(req, res) {
     try {
-        let fileId = null;
         let imageUrl = null;
 
         // Directly use eventFeatures and eventTags as arrays from the request body
         let eventFeatures = req.body.eventFeatures || [];
         let eventTags = req.body.eventTags || [];
-
-
 
         // Create a new event object
         const eventDetails = {
@@ -163,14 +160,12 @@ async function createEvent(req, res) {
     }
 }
 
-
 async function connectDB() {
     if (!client.topology || !client.topology.isConnected()) {
         await client.connect();
         console.log("MongoDB connected successfully.");
     }
 }
-
 
 // Update event
 async function updateEvent(req, res) {
@@ -184,7 +179,6 @@ async function updateEvent(req, res) {
             { $set: updatedEventData }, // Apply the updates
             { new: true, runValidators: true } // Get the updated document
         );
-
 
         const eventForId = await Event.findById(eventId);
 
@@ -253,7 +247,7 @@ async function updateEvent(req, res) {
         if (updatedEventData.eventFeatures !== undefined) {
             if (typeof updatedEventData.eventFeatures === 'string') {
                 event.eventFeatures = updatedEventData.eventFeatures
-                    .split(',')
+                    .split(',') 
                     .map((feature) => feature.trim());
             } else {
                 event.eventFeatures = updatedEventData.eventFeatures;
@@ -290,6 +284,8 @@ async function updateEvent(req, res) {
         return res.status(500).json({ error: 'Internal server error' });
     }
 }
+
+module.exports = { createEvent, updateEvent, connectDB };
 
 
 // Delete event
