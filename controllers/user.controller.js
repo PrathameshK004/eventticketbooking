@@ -193,7 +193,7 @@ async function createUser(req, res) {
 
 async function createUserGoogle(req, res) {
     try {
-        const newUser =null;
+        let newUser;
         const newUserGoogle = req.body;
         newUserGoogle.isGoogle = true;
 
