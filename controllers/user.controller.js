@@ -39,6 +39,10 @@ async function sendOTP(req, res) {
             return res.status(404).json({ message: "User not found" });
         }
 
+        if (user && user.isTemp) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
         if (purpose === "AdminLogin" && !user.roles.includes(2)) {
             return res.status(403).json({ message: "Access denied! Admins only." });
         }
