@@ -194,7 +194,7 @@ async function createUserGoogle(req, res) {
         newUserGoogle.isGoogle = true;
 
         newUser = await User.findOne({emailID: req.body.emailID});
-        if(newUser && newUser.isTemp){
+        if(newUser.isTemp){
             newUser.isGoogle =true;
             newUser.isTemp =false;
             newUser.passwordGoogle=req.body.password;
