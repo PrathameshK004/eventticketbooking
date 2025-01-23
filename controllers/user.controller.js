@@ -362,6 +362,10 @@ async function validateLoginGoogle(req, res) {
             await checkGoogleUser.save();
         }
 
+        if(checkGoogleUser && checkGoogleUser.isTemp){
+            return res.status(404).json({ message: "User not found" });
+        }
+
         if (emailRegex.test(emailID)) {
             user = await User.loginWithGoogle(emailID, password);
         } else {
