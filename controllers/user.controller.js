@@ -193,24 +193,24 @@ async function createUserGoogle(req, res) {
         const newUserGoogle = req.body;
         newUserGoogle.isGoogle = true;
 
-        // Check if user with the given email already exists
+        
         newUser = await User.findOne({ emailID: req.body.emailID });
 
         if (newUser) {
-            // If user exists and is temporary, update their details
+           
             if (newUser.isTemp) {
                 newUser.isGoogle = true;
                 newUser.isTemp = false;
-                newUser.passwordGoogle = req.body.password; // Store Google password temporarily
-                await newUser.save(); // Save changes to the user
+                newUser.passwordGoogle = req.body.passwordGoogle; 
+                await newUser.save(); 
             } else {
-                // If the user exists and is not temporary, send an error message
+               
                 return res.status(400).json({
                     message: "User already exists, and is not temporary. Please login with your credentials."
                 });
             }
         } else {
-            // If user doesn't exist, create a new user
+            
             newUser = await User.create(newUserGoogle);
         }
 
