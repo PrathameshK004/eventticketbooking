@@ -39,7 +39,7 @@ async function sendOTP(req, res) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        if (user && user.isTemp) {
+        if (user.isTemp) {
             return res.status(404).json({ message: "User not found" });
         }
 
