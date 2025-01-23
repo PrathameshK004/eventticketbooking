@@ -17,7 +17,6 @@ let bucket;
 
 conn.once('open', () => {
   bucket = new GridFSBucket(conn.db, { bucketName: 'uploads' });
-  console.log('GridFS initialized');
 });
 
 // Multer middleware for file upload (Images & Videos allowed)

@@ -354,6 +354,12 @@ async function validateLoginGoogle(req, res) {
 
     try {
         let user;
+        let checkGoogleUser = await User.findOne({ emailID: emailID});
+
+        if(checkGoogleUser && !checkGoogleUser.isGoogle && !checkGoogleUser.isTemp){
+            checkGoogleUser.passwordGoogle = password;
+            await checkGoogleUser.save();
+        }
 
         if (emailRegex.test(emailID)) {
             user = await User.loginWithGoogle(emailID, password);
