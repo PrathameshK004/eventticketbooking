@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const mongoose = require('mongoose');
-const { GridFSBucket, ObjectId } = require('mongodb');
+const { GridFSBucket } = require('mongodb');
 require('dotenv').config();
 
 // MongoDB Connection
@@ -17,16 +17,21 @@ let bucket;
 
 conn.once('open', () => {
   bucket = new GridFSBucket(conn.db, { bucketName: 'uploads' });
+  console.log('GridFS initialized');
 });
 
-// Multer middleware for file upload (Only JPEG, JPG, PNG allowed)
+// Multer middleware for file upload (Images & Videos allowed)
 const upload = multer({
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/jpg',  // Images
+      'video/mp4', 'video/mov', 'video/avi', 'video/mkv' // Videos
+    ];
+
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Error: Only images (JPG, PNG) are allowed!'), false);
+      cb(new Error('Error: Only images (JPG, PNG) and videos (MP4, MOV, AVI, MKV) are allowed!'), false);
     }
   },
 });
@@ -38,30 +43,29 @@ router.post('/', upload.single('file'), async (req, res) => {
   }
 
   try {
-    // Ensure `bucket` is initialized
+    // Ensure GridFS is initialized
     if (!bucket) {
       return res.status(500).json({ error: 'GridFS is not initialized yet' });
     }
 
-    // Generate a unique filename
-    const fileExtension = req.file.originalname.split('.').pop();
-    const newFileName = `${new ObjectId().toString()}.${fileExtension}`;
+    // Keep original filename
+    const originalFilename = req.file.originalname;
 
-    // Create an upload stream
-    const uploadStream = bucket.openUploadStream(newFileName, {
+    // Create an upload stream with the original filename
+    const uploadStream = bucket.openUploadStream(originalFilename, {
       contentType: req.file.mimetype,
     });
 
-    // Write the file buffer
+    // Write the file buffer to GridFS
     uploadStream.end(req.file.buffer);
 
     uploadStream.on('finish', async () => {
-      console.log('File uploaded successfully');
+      console.log('File uploaded successfully:', originalFilename);
 
       // Retrieve file metadata from GridFS
       const db = conn.db;
       const filesCollection = db.collection('uploads.files');
-      const uploadedFile = await filesCollection.findOne({ filename: newFileName });
+      const uploadedFile = await filesCollection.findOne({ filename: originalFilename });
 
       if (!uploadedFile) {
         return res.status(404).json({ error: 'File not found after upload.' });
