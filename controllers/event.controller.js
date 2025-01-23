@@ -164,20 +164,28 @@ async function createEvent(req, res) {
 }
 
 
+async function connectDB() {
+    if (!client.topology || !client.topology.isConnected()) {
+        await client.connect();
+        console.log("MongoDB connected successfully.");
+    }
+}
 
-// Update event
+
 async function updateEvent(req, res) {
     const eventId = req.params.eventId;
     const updatedEventData = req.body;
 
     try {
+        // Ensure MongoDB is connected
+        await connectDB();
+
         // First, update event data in the database
         const event = await Event.findByIdAndUpdate(
             eventId,
             { $set: updatedEventData }, // Apply the updates
             { new: true, runValidators: true } // Get the updated document
         );
-
 
         const eventForId = await Event.findById(eventId);
 
@@ -187,6 +195,9 @@ async function updateEvent(req, res) {
 
         // If a new file is uploaded, handle the file update
         if (req.file) {
+            const db = client.db('eventticketbooking');
+            const bucket = new GridFSBucket(db, { bucketName: 'uploads' });
+
             // Delete the old file from GridFS, if one exists
             if (event.fileId) {
                 await bucket.delete(ObjectId(event.fileId));
@@ -201,66 +212,50 @@ async function updateEvent(req, res) {
 
             uploadStream.end(req.file.buffer);
 
-            // On file upload success, retrieve file metadata
-            try {
-                // Connect to MongoDB and retrieve the file metadata
-                const db = client.db('eventticketbooking');
-                const filesCollection = db.collection('uploads.files'); // GridFS metadata collection
+            // Wait for the file to finish uploading
+            await new Promise((resolve, reject) => {
+                uploadStream.on('finish', resolve);
+                uploadStream.on('error', reject);
+            });
 
-                // Query to find the file by its filename
-                const uploadedFile = await filesCollection.findOne({ filename: newFileName });
+            // Retrieve file metadata
+            const filesCollection = db.collection('uploads.files'); // GridFS metadata collection
+            const uploadedFile = await filesCollection.findOne({ filename: newFileName });
 
-                if (!uploadedFile) {
-                    return res.status(404).json({ error: 'File not found.' });
-                }
-
-                // Extract file metadata
-                const fileMetadata = {
-                    _id: uploadedFile._id,
-                    chunkSize: uploadedFile.chunkSize,
-                    contentType: uploadedFile.contentType,
-                    filename: uploadedFile.filename,
-                    length: uploadedFile.length,
-                    uploadDate: uploadedFile.uploadDate,
-                };
-
-                // Update event with the new file metadata
-                eventForId.fileId = fileMetadata._id;
-                const imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
-                event.imageUrl = imageUrl;
-
-                await event.save(); // Save the updated event with the new file data
-
-                // Send response after event and file update are completed
-                return res.status(201).json({ event, fileMetadata });
-
-            } catch (err) {
-                console.error('Error retrieving file info:', err);
-                return res.status(500).json({ error: 'Error retrieving file info from the database.' });
-            } finally {
-                await client.close(); // Close MongoDB connection
+            if (!uploadedFile) {
+                return res.status(404).json({ error: 'File not found.' });
             }
+
+            // Extract file metadata
+            const fileMetadata = {
+                _id: uploadedFile._id,
+                chunkSize: uploadedFile.chunkSize,
+                contentType: uploadedFile.contentType,
+                filename: uploadedFile.filename,
+                length: uploadedFile.length,
+                uploadDate: uploadedFile.uploadDate,
+            };
+
+            // Update event with the new file metadata
+            eventForId.fileId = fileMetadata._id;
+            eventForId.imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
+
+            await eventForId.save(); // Save the updated event with the new file data
+
+            return res.status(201).json({ event: eventForId, fileMetadata });
         }
 
         // Handle optional updates for eventFeatures and eventTags
         if (updatedEventData.eventFeatures !== undefined) {
-            if (typeof updatedEventData.eventFeatures === 'string') {
-                event.eventFeatures = updatedEventData.eventFeatures
-                    .split(',')
-                    .map((feature) => feature.trim());
-            } else {
-                event.eventFeatures = updatedEventData.eventFeatures;
-            }
+            event.eventFeatures = Array.isArray(updatedEventData.eventFeatures)
+                ? updatedEventData.eventFeatures
+                : updatedEventData.eventFeatures.split(',').map((feature) => feature.trim());
         }
 
         if (updatedEventData.eventTags !== undefined) {
-            if (typeof updatedEventData.eventTags === 'string') {
-                event.eventTags = updatedEventData.eventTags
-                    .split(',')
-                    .map((tag) => tag.trim());
-            } else {
-                event.eventTags = updatedEventData.eventTags;
-            }
+            event.eventTags = Array.isArray(updatedEventData.eventTags)
+                ? updatedEventData.eventTags
+                : updatedEventData.eventTags.split(',').map((tag) => tag.trim());
         }
 
         // Update other fields dynamically
@@ -272,7 +267,6 @@ async function updateEvent(req, res) {
 
         await event.save(); // Save the final updated event data
 
-        // Respond with the updated event data
         return res.status(200).json({
             event,
             message: req.file ? 'Event updated with new image successfully!' : 'Event updated successfully!',
