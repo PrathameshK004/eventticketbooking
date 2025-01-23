@@ -12,6 +12,7 @@ router.get('/checkAuth', verifyToken, (req, res) => {
 router.get('/logout', usersController.logoutUser);
 router.get('/:userId', verifyToken, userInterceptor.validateUserId, usersController.getUserById);
 router.post('/login', userInterceptor.checkLogin, usersController.validateLogin);
+router.post('/loginOtp', userInterceptor.validateOtpReq, usersController.validateLoginOtp);
 router.post('/loginGoogle', userInterceptor.checkLoginGoogle, usersController.validateLoginGoogle);
 router.post('/addUser', userInterceptor.validateNewUser, usersController.createUser);
 router.post('/addTempUser', userInterceptor.validateNewTempUser, usersController.createTempUser);

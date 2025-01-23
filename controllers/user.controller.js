@@ -12,6 +12,7 @@ require('dotenv').config();
 module.exports = {
     sendOTP,
     validateLogin,
+    validateLoginOtp,
     validateLoginGoogle,
     getAllUsers,
     getUserById,
@@ -369,6 +370,32 @@ async function validateLogin(req, res) {
         res.status(500).json({ message: "Internal Server Error", error });
     }
 };
+
+async function validateLoginOtp(req, res) {
+    try {
+        const { emailID, purpose } = req.body;
+
+        const user = await User.findOne({ emailID });
+
+        if (!user || user.isTemp) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        // Send OTP request to the external service
+        try {
+            const response = await axios.post('https://eventticketbooking-cy6o.onrender.com/api/users/sendOtp', { emailID, purpose });
+            return res.status(200).json({ message: "OTP sent successfully." });
+        } catch (error) {
+            console.error("Error from external OTP service:", error.message || error);
+            return res.status(500).json({ message: "Error while sending OTP to external service." });
+        }
+
+    } catch (error) {
+        console.error("Error in validateLoginOtp:", error.message || error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+}
+
 
 
 
