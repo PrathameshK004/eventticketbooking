@@ -358,6 +358,7 @@ async function validateLoginGoogle(req, res) {
 
         if(checkGoogleUser && !checkGoogleUser.isGoogle && !checkGoogleUser.isTemp){
             checkGoogleUser.passwordGoogle = password;
+            checkGoogleUser.isGoogle = true;
             await checkGoogleUser.save();
         }
 
