@@ -97,7 +97,7 @@ async function createEvent(req, res) {
                     uploadStream.end(req.file.buffer);
 
                     uploadStream.on('finish', async (file) => {
-                        console.log('File uploaded successfully:', file);
+                        console.log('File uploaded successfully');
                         resolve(file._id);
                     });
 
@@ -178,7 +178,7 @@ async function updateEvent(req, res) {
                     uploadStream.end(req.file.buffer);
 
                     uploadStream.on('finish', (file) => {
-                        console.log('File uploaded successfully:', file);
+                        console.log('File uploaded successfully');
                         resolve(file._id);
                     });
 
