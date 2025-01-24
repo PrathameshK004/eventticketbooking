@@ -466,8 +466,12 @@ async function validateAdminLogin(req, res) {
     try {
         const { emailID, code } = req.body;
 
-        const checkUser = User.fiindOne({ emailId : emailID});
+        const checkUser = User.findOne({ emailId : emailID});
 
+        if (!checkUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        
         if (!checkUser.code) {
             return res.status(400).json({ message: "OTP is missing or expired. Request a new one." });
         }
