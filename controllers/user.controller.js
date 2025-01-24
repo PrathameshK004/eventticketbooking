@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const ObjectId = require('mongoose').Types.ObjectId;
 const nodemailer = require('nodemailer');
 const axios = require('axios');
+const bcrypt = require('bcrypt');
 
 require('dotenv').config();
 
@@ -148,12 +149,14 @@ async function createUser(req, res) {
             return res.status(400).json({ message: "OTP expired. Please request a new one." });
         }
 
-        if (tempUser.code !== code) {
+        // Compare the entered code with the hashed code
+        const isCodeValid = await bcrypt.compare(code, tempUser.code);
+        if (!isCodeValid) {
             return res.status(400).json({ message: "Invalid OTP. Please try again." });
         }
 
         // OTP is correct, proceed with login
-        tempUser.code = null;
+        
         tempUser.codeExpiry = null;
         tempUser.isTemp=false;
 
@@ -345,12 +348,14 @@ async function validateLogin(req, res) {
             return res.status(400).json({ message: "OTP expired. Please request a new one." });
         }
 
-        if (user.code !== code) {
+        // Compare the entered code with the hashed code
+        const isCodeValid = await bcrypt.compare(code, user.code);
+        if (!isCodeValid) {
             return res.status(400).json({ message: "Invalid OTP. Please try again." });
         }
        
         // OTP is correct, proceed with login
-        user.code = null;
+        
         user.codeExpiry = null;
         await user.save();
 
@@ -454,6 +459,7 @@ function logoutUser(req, res) {
     res.status(200).json({ message: 'Successfully logged out' }); // Send success message
 }
 
+
 async function validateAdminLogin(req, res) {
     try {
         const { emailID, code } = req.body;
@@ -471,12 +477,14 @@ async function validateAdminLogin(req, res) {
             return res.status(400).json({ message: "OTP expired. Please request a new one." });
         }
 
-        if (user.code !== code) {
+        // Compare the entered code with the hashed code
+        const isCodeValid = await bcrypt.compare(code, user.code);
+        if (!isCodeValid) {
             return res.status(400).json({ message: "Invalid OTP. Please try again." });
         }
 
         // OTP is correct, proceed with login
-        user.code = null;
+        
         user.codeExpiry = null;
         await user.save();
 
