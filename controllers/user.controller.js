@@ -140,43 +140,44 @@ const createToken = (key) => { // Update to key from id
 
 async function createUser(req, res) {
     try {
+        const { userName, emailID, code } = req.body;
+        
+        const tempUser = await User.findOne({ emailID });
+        if (!tempUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
 
-        const {userName, emailID, code } = req.body;
-        const tempUser= await User.findOne({emailID: emailID});
-         // Validate OTP
-         if (!tempUser.code || tempUser.codeExpiry < Date.now()) {
+        if (!tempUser.code || tempUser.codeExpiry < Date.now()) {
             return res.status(400).json({ message: "OTP expired. Please request a new one." });
         }
 
-        try {
-            await User.validateOtp(tempUser.emailID, code);
-        } catch (err) {
-            return res.status(400).json({ message: err.message });
-        }
+        await User.validateOtp(tempUser.emailID, code);
 
-        // OTP is correct, proceed with login
         tempUser.code = null;
         tempUser.codeExpiry = null;
-        tempUser.isTemp=false;
 
-        // Save the user
+        // Save user first
+        await tempUser.save();
+        
+        // Set isTemp to false only if save was successful
+        tempUser.isTemp = false;
         await tempUser.save();
 
-        // Create an associated wallet with an initial balance of 0
+        // Create associated wallet
         const newWallet = new Wallet({
             userId: tempUser._id,  // Link the wallet to the newly created user
             balance: 0,
             transactions: []
         });
 
-        // Save the wallet
+        // Save wallet
         await newWallet.save();
-       
 
         res.status(201).json({
             userId: tempUser._id, 
             userName: tempUser.userName
         });
+
     } catch (error) {
         if (error.name === 'ValidationError') {
             const errorMessages = Object.values(error.errors).map(err => err.message);
@@ -185,7 +186,7 @@ async function createUser(req, res) {
                 errors: errorMessages 
             });
         }
-        console.error(error.message);
+        console.error("User Creation Error:", error.message);
         res.status(500).json({ message: "Internal server error" });
     }
 }
@@ -342,39 +343,38 @@ async function validateLogin(req, res) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Validate OTP
+        // Validate OTP expiration
         if (!user.code || user.codeExpiry < Date.now()) {
             return res.status(400).json({ message: "OTP expired. Please request a new one." });
         }
 
-        try {
-            await User.validateOtp(user.emailID, code);
-        } catch (err) {
-            return res.status(400).json({ message: err.message });
-        }
-       
+        // Validate OTP using model method
+        await User.validateOtp(user.emailID, code);
+
         // OTP is correct, proceed with login
         user.code = null;
         user.codeExpiry = null;
         await user.save();
 
-        const token = createToken(user._id); // Ensure this is based on user._id
+        // Generate JWT token only after successful login
+        const token = createToken(user._id);
         res.cookie('jwt', token, {
             httpOnly: true,
             secure: true,
             sameSite: 'None',
             maxAge: 2 * 60 * 60 * 1000
         });
+
         res.status(200).json({
             userId: user._id,
             user: user.userName
         });
 
     } catch (error) {
-        console.error("Admin Login Error:", error.message);
-        res.status(500).json({ message: "Internal Server Error", error });
+        console.error("Login Error:", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
     }
-};
+}
 
 async function validateLoginOtp(req, res) {
     try {
@@ -461,26 +461,14 @@ function logoutUser(req, res) {
 async function validateAdminLogin(req, res) {
     try {
         const { emailID, code } = req.body;
-        const user = await User.findOne({ emailID });
 
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
+        // Use validateOtp method from the User model
+        const user = await User.validateOtp(emailID, code);
+
         if (!user.roles.includes(2)) {
             return res.status(403).json({ message: "Access denied! Admins only." });
         }
-
-        // Validate OTP
-        if (!user.code || user.codeExpiry < Date.now()) {
-            return res.status(400).json({ message: "OTP expired. Please request a new one." });
-        }
-
-        try {
-            await User.validateOtp(user.emailID, code);
-        } catch (err) {
-            return res.status(400).json({ message: err.message });
-        }
-
+              
         // OTP is correct, proceed with login
         user.code = null;
         user.codeExpiry = null;

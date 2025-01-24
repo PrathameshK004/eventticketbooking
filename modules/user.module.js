@@ -41,17 +41,27 @@ userSchema.pre('save', async function(next){
     next();
 });
 
-userSchema.statics.validateOtp = async function(emailID, code) {
-    const user = await this.findOne({ emailID : emailID });
-    if (user) {
-        const auth = await bcrypt.compare(code.toString(), user.code);
-        if (auth) {
-            return user;
-        }
+userSchema.statics.validateOtp = async function (emailID, code) {
+    const user = await this.findOne({ emailID });
+
+    if (!user) {
+        throw Error('Email not registered');
+    }
+
+    // Ensure OTP is present
+    if (!user.code || user.codeExpiry < Date.now()) {
+        throw Error('OTP expired. Please request a new one.');
+    }
+
+    // Compare OTP using bcrypt
+    const isOtpValid = await bcrypt.compare(code.toString(), user.code);
+    if (!isOtpValid) {
         throw Error('Invalid OTP. Please try again.');
     }
-    throw Error('Email not registered');
-  };
+
+    return user;
+};
+
 
 userSchema.statics.loginWithGoogle = async function(emailID, password) {
     const user = await this.findOne({ emailID : emailID });
