@@ -548,6 +548,11 @@ async function removeAdmin(req, res) {
     const { adminUserId } = req.body;
 
     try {
+
+        if (userId === adminUserId) {
+            return res.status(400).json({ message: "You cannot remove yourself as an Admin." });
+        }
+        
         const user = await User.findById(userId);
         const adminUser = await User.findById(adminUserId);
 
