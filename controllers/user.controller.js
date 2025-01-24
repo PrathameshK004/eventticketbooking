@@ -151,6 +151,10 @@ async function createUser(req, res) {
             return res.status(400).json({ message: "OTP expired. Please request a new one." });
         }
 
+        if (!tempUser.code) {
+            return res.status(400).json({ message: "OTP is missing or expired. Request a new one." });
+        }
+
         await User.validateOtp(tempUser.emailID, code);
 
         tempUser.code = null;
@@ -461,6 +465,12 @@ function logoutUser(req, res) {
 async function validateAdminLogin(req, res) {
     try {
         const { emailID, code } = req.body;
+
+        const checkUser = User.fiindOne({ emailId : emailID});
+
+        if (!checkUser.code) {
+            return res.status(400).json({ message: "OTP is missing or expired. Request a new one." });
+        }
 
         // Use validateOtp method from the User model
         const user = await User.validateOtp(emailID, code);
