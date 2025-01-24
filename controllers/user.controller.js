@@ -148,8 +148,10 @@ async function createUser(req, res) {
             return res.status(400).json({ message: "OTP expired. Please request a new one." });
         }
 
-        if (tempUser.code !== code) {
-            return res.status(400).json({ message: "Invalid OTP. Please try again." });
+        try {
+            await User.validateOtp(tempUser.emailID, code);
+        } catch (err) {
+            return res.status(400).json({ message: err.message });
         }
 
         // OTP is correct, proceed with login
@@ -345,8 +347,10 @@ async function validateLogin(req, res) {
             return res.status(400).json({ message: "OTP expired. Please request a new one." });
         }
 
-        if (user.code !== code) {
-            return res.status(400).json({ message: "Invalid OTP. Please try again." });
+        try {
+            await User.validateOtp(user.emailID, code);
+        } catch (err) {
+            return res.status(400).json({ message: err.message });
         }
        
         // OTP is correct, proceed with login
@@ -471,8 +475,10 @@ async function validateAdminLogin(req, res) {
             return res.status(400).json({ message: "OTP expired. Please request a new one." });
         }
 
-        if (user.code !== code) {
-            return res.status(400).json({ message: "Invalid OTP. Please try again." });
+        try {
+            await User.validateOtp(user.emailID, code);
+        } catch (err) {
+            return res.status(400).json({ message: err.message });
         }
 
         // OTP is correct, proceed with login

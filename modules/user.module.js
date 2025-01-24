@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema({
     isGoogle: {type: Boolean, default: false},
     passwordGoogle: {type: String},
     isTemp: {type: Boolean, default: false},
-    code: { type: Number }, // OTP Code
+    code: { type: String }, // OTP Code
     codeExpiry: { type: Date } // OTP Expiry
 });
 
@@ -32,6 +32,26 @@ userSchema.pre('save', async function(next){
     }
     next();
 });
+
+userSchema.pre('save', async function(next){
+    if (this.isModified('code')) {
+        const salt = await bcrypt.genSalt();
+        this.code = await bcrypt.hash(this.code.toString(), salt);
+    }
+    next();
+});
+
+userSchema.statics.validateOtp = async function(emailID, code) {
+    const user = await this.findOne({ emailID : emailID });
+    if (user) {
+        const auth = await bcrypt.compare(code.toString(), user.code);
+        if (auth) {
+            return user;
+        }
+        throw Error('Invalid OTP. Please try again.');
+    }
+    throw Error('Email not registered');
+  };
 
 userSchema.statics.loginWithGoogle = async function(emailID, password) {
     const user = await this.findOne({ emailID : emailID });
