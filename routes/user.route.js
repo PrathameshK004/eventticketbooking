@@ -9,7 +9,7 @@ router.get('/allUsers', verifyToken, usersController.getAllUsers);
 router.get('/checkAuth', verifyToken, (req, res) => {
     res.status(200).json({ isAuthenticated: true, userKey: req.userKey});
 });
-router.get('/validate-token/:token', verifyToken, (req, res) => {
+router.get('/validateTemp/validate-token/:token', verifyToken, (req, res) => {
     res.status(200).json({ isAuthenticated: true, userKey: req.userKey});
 });
 

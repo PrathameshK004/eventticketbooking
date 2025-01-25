@@ -367,7 +367,8 @@ async function validateLogin(req, res) {
         });
         res.status(200).json({
             userId: user._id,
-            user: user.userName
+            user: user.userName,
+            roles: user.roles
         });
 
     } catch (error) {
@@ -438,7 +439,8 @@ async function validateLoginGoogle(req, res) {
         });
         res.status(200).json({
             userId: user._id,
-            user: user.userName
+            user: user.userName,
+            user: user.roles
         });
 
     } catch (err) {
