@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const { GridFSBucket } = require('mongodb');
+const User = require('../modules/user.module.js');
 const crypto = require('crypto');
-const verifyToken = require('../interceptor/auth.interceptor'); // Assuming it extracts user info from JWT
+const jwt = require('jsonwebtoken'); 
+const verifyToken = require('../interceptor/auth.interceptor'); 
 require('dotenv').config();
 
 // MongoDB Connection
@@ -21,11 +23,28 @@ conn.once('open', () => {
 });
 
 // Middleware to check if user is an admin
-function isAdmin(req, res, next) {
-  if (!req.user || !req.user.roles || !req.user.roles.includes(2)) {
-    return res.status(403).json({ error: 'Access denied. Admins only.' });
+async function isAdmin(req, res, next) {
+  try {
+    const token = req.cookies.jwt; 
+
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized. No token provided.' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWTSecret); 
+    const userId = decoded.key; 
+
+    const user = await User.findById(userId);
+    if (!user || !user.roles || !user.roles.includes(2)) {
+      return res.status(403).json({ error: 'Access denied. Admins only.' });
+    }
+
+    req.user = user; // Attach user object to request
+    next();
+  } catch (error) {
+    console.error('Admin check error:', error);
+    return res.status(403).json({ error: 'Invalid or expired token.' });
   }
-  next();
 }
 
 // Function to decrypt file data
