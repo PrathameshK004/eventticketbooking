@@ -187,7 +187,7 @@ async function respondToEnquiry(req, res) {
                         <!-- Header Section -->
                         <div style="text-align: center; background-color: #030711; padding: 15px; border-radius: 8px 8px 0 0;">
                             <img src="https://i.imgur.com/sx36L2V.png" alt="EventHorizon Logo" style="max-width: 80px;">
-                            <h2 style="color: #ffffff; margin: 10px 0;">Event Dashboard Link</h2>
+                            <h2 style="color: #ffffff; margin: 10px 0;">Event Add Dashboard Link</h2>
                         </div>
             
                         <!-- Welcome Message -->
@@ -196,9 +196,9 @@ async function respondToEnquiry(req, res) {
                             <p>Your request to organize an event has been <strong>approved</strong>. You can now access the EventHorizon Dashboard and add your event.</p>
                             
                             <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px; text-align: center;">
-                                <p>We have provided you with a <strong>temporary access link</strong>, valid for <strong>24 hours</strong>. Use the link below to access the event dashboard:</p>
+                                <p>We have provided you with a <strong>temporary access link</strong>, valid for <strong>24 hours</strong>. Use the link below to access the event add dashboard:</p>
                                 
-                                <a href="${addEventLink}" style="display: inline-block; background-color: #0078ff; color: #ffffff; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-size: 16px; margin-top: 10px;">Access Dashboard</a>
+                                <a href="${addEventLink}" style="display: inline-block; background-color: #0078ff; color: #ffffff; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-size: 16px; margin-top: 10px;">Add Event</a>
             
                                 <p style="color: red; margin-top: 10px;"><strong>Note:</strong> This link expires in 24 hours.</p>
                             </div>

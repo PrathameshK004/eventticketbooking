@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema({
     isGoogle: { type: Boolean, default: false },
     passwordGoogle: { type: String },
     isTemp: { type: Boolean, default: false },
+    eventId: { type: [ String ] },
     code: { type: String }, // Changed to String
     codeExpiry: { type: Date } // OTP Expiry
 });

@@ -6,6 +6,7 @@ const { GridFSBucket } = require('mongodb');
 const mongoose = require('mongoose');
 const path = require('path');
 const { MongoClient } = require('mongodb');
+const jwt = require('jsonwebtoken');
 const client = new MongoClient(process.env.CONNECTIONSTRING);
 
 // Initialize GridFSBucket
@@ -57,6 +58,18 @@ async function createEvent(req, res) {
         let fileId = null;
         let imageUrl = null;
 
+        let token = req.headers.authorization?.split(' ')[1]; 
+        if (!token) {
+            token = req.cookies.jwt; 
+        }
+
+        if (!token) {
+            return res.status(401).json({ message: 'No token provided' });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.key;
+
         let eventFeatures = req.body.eventFeatures || [];
         let eventTags = req.body.eventTags || [];
 
@@ -75,7 +88,8 @@ async function createEvent(req, res) {
             eventTags: eventTags,
             eventOrgInsta: req.body.eventOrgInsta,
             eventOrgX: req.body.eventOrgX,
-            eventOrgFacebook: req.body.eventOrgFacebook
+            eventOrgFacebook: req.body.eventOrgFacebook,
+            userId: userId
         };
 
         const newEvent = await Event.create(eventDetails);
@@ -113,7 +127,14 @@ async function createEvent(req, res) {
                 // Update event with fileId and imageUrl
                 newEvent.fileId = fileId;
                 newEvent.imageUrl = imageUrl;
-                await newEvent.save();
+                const savedEvent = await newEvent.save();
+
+                await User.findByIdAndUpdate(
+                    userId,
+                    { $push: { eventId: savedEvent._id } }, // Push the eventId into the user's eventId array
+                    { new: true } // Return the updated user document
+                );
+                
             } catch (uploadError) {
                 console.error('Error uploading file:', uploadError);
                 return res.status(500).json({ error: 'File upload failed.' });
