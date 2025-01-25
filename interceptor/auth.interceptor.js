@@ -3,7 +3,7 @@ const User = require('../modules/user.module.js');
 
 // Middleware to verify the JWT
 const verifyToken = async (req, res, next) => {
-    const token = req.cookies.jwt || req.headers['authorization']?.split(' ')[1] || req.params.token;
+    const token = req.cookies.jwt || req.headers['authorization']?.split(' ')[1] || req.query.token;
 
     if (req.headers['test'] === process.env.TEST_TOKEN) {
         console.log("Static test token validated");
