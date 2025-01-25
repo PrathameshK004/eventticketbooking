@@ -24,7 +24,6 @@ module.exports = {
     deleteUser,
     logoutUser,
     validateAdminLogin,
-    makeOrg,
     makeAdmin,
     removeAdmin
 };
@@ -577,41 +576,6 @@ async function removeAdmin(req, res) {
         await user.save();
 
         return res.status(200).json({ message: 'User has been successfully updated and removed as Admin' });
-
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Server error, please try again later' });
-    }
-}
-
-
-async function makeOrg(req, res) {
-    const userId = req.params.userId;
-    const { adminUserId } = req.body;
-    try {
-        const user = await User.findById(userId);
-        const adminUser = await User.findById(adminUserId);
-
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        if (!adminUser) {
-            return res.status(404).json({ message: 'Admin User not found' });
-        }
-
-        if (!adminUser.roles.includes(2)) {
-            return res.status(403).json({ message: 'You are not authorized to update this user, You are not Admin' })
-        }
-
-        if (user.roles.includes(1)) {
-            return res.status(400).json({ message: 'The User is already an Organizer for a specific Event' })
-        }
-
-        user.roles.addToSet(1);
-        await user.save();
-
-        return res.status(200).json({ message: 'User has been updated successfully to Organizer' });
 
     } catch (error) {
         console.error(error);

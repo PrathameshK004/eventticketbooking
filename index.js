@@ -5,6 +5,7 @@ const path = require('path');
 const methodOverride = require('method-override');
 const indexRouter = require('./routes/index');
 const uploadRoutes = require('./routes/upload.route');
+const retrieveEnquiryRoutes = require('./routes/enquiryFileRetrieve.route');
 const retrieveRoutes = require('./routes/retrieve.route');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -24,7 +25,8 @@ const allowedOrigins = [
   'http://localhost:8100', 
   'https://eventhorizondashboard.web.app',
   'https://localhost',
-  'https://eventticketbooking-cy6o.onrender.com'
+  'https://eventticketbooking-cy6o.onrender.com',
+  "http://localhost:4000"
   
 ];
 
@@ -61,6 +63,7 @@ app.get('/file', (req, res) => {
 
 // Routes
 app.use('/file/upload', uploadRoutes);
+app.use('/file/retrieve/enquiryFile', retrieveEnquiryRoutes);
 app.use('/file/retrieve', retrieveRoutes);
 app.use('/api', indexRouter);
 
