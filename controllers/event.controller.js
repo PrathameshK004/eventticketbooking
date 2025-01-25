@@ -70,6 +70,16 @@ async function createEvent(req, res) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.key;
 
+        const userDetail = await User.findById( userId );
+        if(!userDetail){
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (!userDetail.roles.includes(1) && !userDetail.roles.includes(2)) {
+            return res.status(403).json({ message: 'You are not authorized to add an event. You are not an Admin or Organizer.' });
+        }
+        
+
         let eventFeatures = req.body.eventFeatures || [];
         let eventTags = req.body.eventTags || [];
 
@@ -134,7 +144,7 @@ async function createEvent(req, res) {
                     { $push: { eventId: savedEvent._id } }, // Push the eventId into the user's eventId array
                     { new: true } // Return the updated user document
                 );
-                
+
             } catch (uploadError) {
                 console.error('Error uploading file:', uploadError);
                 return res.status(500).json({ error: 'File upload failed.' });
