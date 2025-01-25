@@ -26,24 +26,35 @@ conn.once('open', () => {
 async function isAdmin(req, res, next) {
   try {
     const token = req.cookies.jwt; 
-
     if (!token) {
       return res.status(401).json({ error: 'Unauthorized. No token provided.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWTSecret); 
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.key; 
 
     const user = await User.findById(userId);
-    if (!user || !user.roles || !user.roles.includes(2)) {
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    if (!user.roles || !user.roles.includes(2)) {
       return res.status(403).json({ error: 'Access denied. Admins only.' });
     }
 
-    req.user = user; // Attach user object to request
-    next();
+    req.user = user;
+    next(); 
   } catch (error) {
     console.error('Admin check error:', error);
-    return res.status(403).json({ error: 'Invalid or expired token.' });
+    
+    // Handle token errors: invalid or expired token
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired. Please log in again.' });
+    } else if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Invalid token. Please log in again.' });
+    } else {
+      return res.status(500).json({ error: 'Internal server error.' });
+    }
   }
 }
 
