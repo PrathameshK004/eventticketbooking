@@ -119,6 +119,12 @@ async function getAllEnquiries(req, res) {
     }
 };
 
+const createToken = (key) => { // Update to key from id
+    return jwt.sign({ key }, process.env.JWTSecret, {
+        expiresIn: '1d'
+    });
+}
+
 async function respondToEnquiry(req, res) {
     try {
         const { status } = req.body;
@@ -157,7 +163,7 @@ async function respondToEnquiry(req, res) {
             }
 
             // Generate the JWT token that expires in 1 day (24 hours)
-            const token = jwt.sign({ userId: user._id }, process.env.JWTSecret, { expiresIn: '1d' });
+            const token = createToken(user._id);
 
             // Create the link for the "Add Event" page with the token
             const addEventLink = `https://eventhorizondashboard.web.app/addevent?token=${token}`;
