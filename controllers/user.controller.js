@@ -440,7 +440,7 @@ async function validateLoginGoogle(req, res) {
         res.status(200).json({
             userId: user._id,
             user: user.userName,
-            user: user.roles
+            roles: user.roles
         });
 
     } catch (err) {
