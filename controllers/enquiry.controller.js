@@ -3,6 +3,8 @@ const User = require('../modules/user.module.js');
 const { GridFSBucket } = require('mongodb');
 const mongoose = require('mongoose');
 const path = require('path');
+const nodemailer = require('nodemailer');
+const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { MongoClient } = require('mongodb');
 const client = new MongoClient(process.env.CONNECTIONSTRING);
@@ -120,7 +122,7 @@ async function getAllEnquiries(req, res) {
 async function respondToEnquiry(req, res) {
     try {
         const { status } = req.body;
-        const enquiry = await Enquiry.findByIdAndUpdate(req.params.enquiryId, { status }, { new: true });
+        const enquiry = await Enquiry.findById(req.params.enquiryId);
         if (!enquiry) {
             return res.status(404).json({ error: 'Enquiry not found' });
         }
@@ -155,7 +157,7 @@ async function respondToEnquiry(req, res) {
             }
 
             // Generate the JWT token that expires in 1 day (24 hours)
-            const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+            const token = jwt.sign({ userId: user._id }, process.env.JWTSecret, { expiresIn: '1d' });
 
             // Create the link for the "Add Event" page with the token
             const addEventLink = `https://eventhorizondashboard.web.app/addevent?token=${token}`;
@@ -164,13 +166,13 @@ async function respondToEnquiry(req, res) {
             const transporter = nodemailer.createTransport({
                 service: 'gmail', // You can use other services like SendGrid, etc.
                 auth: {
-                    user: process.env.EMAIL_USER, 
-                    pass: process.env.EMAIL_PASS, 
+                    user: process.env.EMAIL, 
+                    pass: process.env.EMAIL_PASSWORD, 
                 },
             });
 
             const mailOptions = {
-                from: process.env.EMAIL_USER,
+                from: process.env.EMAIL,
                 to: user.emailID, 
                 subject: `Add Event Request Link`,
                 html: `
@@ -184,7 +186,7 @@ async function respondToEnquiry(req, res) {
             
                         <!-- Welcome Message -->
                         <div style="background-color: #ffffff; padding: 20px; border-radius: 0 0 8px 8px;">
-                            <p style="font-size: 16px;">Dear <strong>${user.nameName}</strong>,</p>
+                            <p style="font-size: 16px;">Dear <strong>${user.userName}</strong>,</p>
                             <p>Your request to organize an event has been <strong>approved</strong>. You can now access the EventHorizon Dashboard and add your event.</p>
                             
                             <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px; text-align: center;">
