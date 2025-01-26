@@ -86,7 +86,7 @@ async function validateNewEnquiry(req, res, next) {
         if (!userExists || userExists.isTemp) {
             return res.status(404).json({ error: 'User ID not found in the database.' });
         }
-        if (type === 'Event Request' && userExists.roles.includes(1)) {
+        if (type === 'Event Request' && !userExists.roles.includes(1)) {
             return res.status(400).json({ error: 'You are not Organizer to Request Add Event' });
         }
     } catch (error) {
