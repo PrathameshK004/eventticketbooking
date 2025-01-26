@@ -162,7 +162,7 @@ async function validateUpdateEvent(req, res, next) {
 }
 
 
-async function validateTokenReuse() {
+async function validateTokenReuse(req, res, next) {
   try {
     const { token } = req.query.token;
 
