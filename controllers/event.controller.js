@@ -8,7 +8,6 @@ const path = require('path');
 const { MongoClient } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const client = new MongoClient(process.env.CONNECTIONSTRING);
-require('dotenv').config();
 
 
 // Initialize GridFSBucket
@@ -69,7 +68,7 @@ async function createEvent(req, res) {
             return res.status(401).json({ message: 'No token provided' });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWTSecret);
         const userId = decoded.key;
 
         const userDetail = await User.findById( userId );
