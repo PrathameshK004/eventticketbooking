@@ -60,7 +60,7 @@ async function createEvent(req, res) {
         let fileId = null;
         let imageUrl = null;
 
-        let token = req.query.token;
+        let token = req.params.token;
         if (!token) {
             token = req.cookies.jwt; 
         }
