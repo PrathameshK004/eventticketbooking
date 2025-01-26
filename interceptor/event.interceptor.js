@@ -167,7 +167,7 @@ async function validateTokenReuse() {
     const { token } = req.query.token;
 
     if (!token) {
-      return next();
+      next();
     }
 
     const tokenDoc = await Token.findOne({ token });
@@ -187,7 +187,7 @@ async function validateTokenReuse() {
     tokenDoc.used = true;
     await tokenDoc.save();
 
-    res.status(200).json({ message: "Token validated. Proceed to add event." });
+    next();
 
 } catch (error) {
     res.status(500).json({ message: "Error validating token" });
