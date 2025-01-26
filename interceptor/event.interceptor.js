@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const app = express();
 const Event = require('../modules/event.module');
+const Token = require('../modules/token.module');
 
 function isDateInPast(date) {
   const currentDate = new Date().toISOString().split('T')[0]; // Get current date in 'YYYY-MM-DD' format
@@ -15,7 +16,8 @@ app.use(bodyParser.json());
 module.exports = {
   validateEventId,
   validateNewEvent,
-  validateUpdateEvent
+  validateUpdateEvent,
+  validateTokenReuse
 };
 
 function isUuidValid(eventId) {
@@ -157,4 +159,37 @@ async function validateUpdateEvent(req, res, next) {
   } catch (error) {
     return res.status(500).json({ error: 'Error updating event.' });
   }
+}
+
+
+async function validateTokenReuse() {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      return next();
+    }
+
+    const tokenDoc = await Token.findOne({ token });
+
+    if (!tokenDoc) {
+        return res.status(400).json({ message: "Invalid token" });
+    }
+
+    if (tokenDoc.used) {
+        return res.status(400).json({ message: "Token has already been used" });
+    }
+
+    if (tokenDoc.expiresAt < new Date()) {
+        return res.status(400).json({ message: "Token has expired" });
+    }
+
+    tokenDoc.used = true;
+    await tokenDoc.save();
+
+    res.status(200).json({ message: "Token validated. Proceed to add event." });
+
+} catch (error) {
+    res.status(500).json({ message: "Error validating token" });
+}
 }

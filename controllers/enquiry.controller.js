@@ -1,4 +1,5 @@
 const Enquiry = require('../modules/enquiry.module.js');
+const Token = require('../modules/token.module.js');
 const User = require('../modules/user.module.js');
 const { GridFSBucket } = require('mongodb');
 const mongoose = require('mongoose');
@@ -164,6 +165,7 @@ async function respondToEnquiry(req, res) {
 
             // Generate the JWT token that expires in 1 day (24 hours)
             const token = createToken(user._id);
+            await Token.create({ token, userId: user._id, used: false, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) });
 
             // Create the link for the "Add Event" page with the token
             const addEventLink = `https://eventhorizondashboard.web.app/addevent?token=${token}`;
