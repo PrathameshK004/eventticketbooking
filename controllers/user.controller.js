@@ -119,7 +119,7 @@ function getAllUsers(req, res) {
 async function getRoles(req, res) {
     let userId = req.params.userId;
     try {
-        let user = await User.findOne(userId);
+        let user = await User.findById(userId);
 
         if (!user || user.isTemp) {
             return res.status(404).json({ message: "User not found" });
