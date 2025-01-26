@@ -25,7 +25,8 @@ module.exports = {
     logoutUser,
     validateAdminLogin,
     makeAdmin,
-    removeAdmin
+    removeAdmin,
+    getRoles
 };
 
 const generateOTP = () => Math.floor(1000 + Math.random() * 9000);
@@ -106,7 +107,7 @@ async function sendOTP(req, res) {
 
 
 function getAllUsers(req, res) {
-    User.find({ isTemp: false }) 
+    User.find({ isTemp: false })
         .then(users => res.status(200).json(users))
         .catch(err => {
             console.error("Error fetching users:", err.message);
@@ -114,6 +115,21 @@ function getAllUsers(req, res) {
         });
 }
 
+
+async function getRoles(req, res) {
+    let userId = req.params.userId;
+    try {
+        let user = await User.findOne(userId);
+
+        if (!user || user.isTemp) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        res.status(200).json(user.roles);
+    } catch (err) {
+        console.error("Internal server error:", err.message);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+}
 
 async function getUserById(req, res) {
     let userId = req.params.userId;
@@ -141,10 +157,10 @@ const createToken = (key) => { // Update to key from id
 async function createUser(req, res) {
     try {
 
-        const {userName, emailID, code } = req.body;
-        const tempUser= await User.findOne({emailID: emailID});
-         // Validate OTP
-         if (!tempUser.code || tempUser.codeExpiry < Date.now()) {
+        const { userName, emailID, code } = req.body;
+        const tempUser = await User.findOne({ emailID: emailID });
+        // Validate OTP
+        if (!tempUser.code || tempUser.codeExpiry < Date.now()) {
             return res.status(400).json({ message: "OTP expired. Please request a new one." });
         }
 
@@ -155,9 +171,9 @@ async function createUser(req, res) {
         }
 
         // OTP is correct, proceed with login
-        
+
         tempUser.codeExpiry = null;
-        tempUser.isTemp=false;
+        tempUser.isTemp = false;
 
         // Save the user
         await tempUser.save();
@@ -171,10 +187,10 @@ async function createUser(req, res) {
 
         // Save the wallet
         await newWallet.save();
-       
+
 
         res.status(201).json({
-            userId: tempUser._id, 
+            userId: tempUser._id,
             userName: tempUser.userName
         });
     } catch (error) {
@@ -182,7 +198,7 @@ async function createUser(req, res) {
             const errorMessages = Object.values(error.errors).map(err => err.message);
             return res.status(400).json({
                 message: "Validation error occurred",
-                errors: errorMessages 
+                errors: errorMessages
             });
         }
         console.error(error.message);
@@ -197,26 +213,26 @@ async function createUserGoogle(req, res) {
         const newUserGoogle = req.body;
         newUserGoogle.isGoogle = true;
 
-        
+
         newUser = await User.findOne({ emailID: req.body.emailID });
 
         if (newUser) {
-           
+
             if (newUser.isTemp) {
                 newUser.userName = req.body.userName;
                 newUser.isGoogle = true;
                 newUser.isTemp = false;
-                newUser.imageUrl =req.body.imageUrl;
-                newUser.passwordGoogle = req.body.passwordGoogle; 
-                await newUser.save(); 
+                newUser.imageUrl = req.body.imageUrl;
+                newUser.passwordGoogle = req.body.passwordGoogle;
+                await newUser.save();
             } else {
-               
+
                 return res.status(400).json({
                     message: "User already exists. Please login with your credentials."
                 });
             }
         } else {
-            
+
             newUser = await User.create(newUserGoogle);
         }
 
@@ -275,7 +291,7 @@ async function updateUser(req, res) {
 }
 
 
-async function createTempUser(req, res){
+async function createTempUser(req, res) {
     try {
         let tempUser;
         const { userName, emailID } = req.body;
@@ -287,9 +303,9 @@ async function createTempUser(req, res){
             if (existingUser && !existingUser.isTemp) {
                 return res.status(400).json({ error: 'User already exists' });
             }
-          } catch (err) {
+        } catch (err) {
             return res.status(500).json({ error: 'Error checking for existing user.' });
-          }
+        }
 
         // If no temporary user exists, create a new one
         if (!tempUser) {
@@ -352,9 +368,9 @@ async function validateLogin(req, res) {
         if (!isCodeValid) {
             return res.status(400).json({ message: "Invalid OTP. Please try again." });
         }
-       
+
         // OTP is correct, proceed with login
-        
+
         user.codeExpiry = null;
         await user.save();
 
@@ -412,15 +428,15 @@ async function validateLoginGoogle(req, res) {
 
     try {
         let user;
-        let checkGoogleUser = await User.findOne({ emailID: emailID});
+        let checkGoogleUser = await User.findOne({ emailID: emailID });
 
-        if(checkGoogleUser && !checkGoogleUser.isGoogle && !checkGoogleUser.isTemp){
+        if (checkGoogleUser && !checkGoogleUser.isGoogle && !checkGoogleUser.isTemp) {
             checkGoogleUser.passwordGoogle = password;
             checkGoogleUser.isGoogle = true;
             await checkGoogleUser.save();
         }
 
-        if(checkGoogleUser && checkGoogleUser.isTemp){
+        if (checkGoogleUser && checkGoogleUser.isTemp) {
             return res.status(404).json({ message: "User not found" });
         }
 
@@ -485,7 +501,7 @@ async function validateAdminLogin(req, res) {
         }
 
         // OTP is correct, proceed with login
-        
+
         user.codeExpiry = null;
         await user.save();
 
@@ -553,7 +569,7 @@ async function removeAdmin(req, res) {
         if (userId === adminUserId) {
             return res.status(400).json({ message: "You cannot remove yourself as an Admin." });
         }
-        
+
         const user = await User.findById(userId);
         const adminUser = await User.findById(adminUserId);
 

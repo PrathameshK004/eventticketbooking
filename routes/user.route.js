@@ -14,6 +14,7 @@ router.get('/validate-token', verifyToken, (req, res) => {
 });
 
 router.get('/logout', usersController.logoutUser);
+router.get('/getRoles/:userId', verifyToken, userInterceptor.validateUserId, usersController.getRoles);
 router.get('/:userId', verifyToken, userInterceptor.validateUserId, usersController.getUserById);
 router.post('/login', userInterceptor.checkLogin, usersController.validateLogin);
 router.post('/loginOtp', userInterceptor.validateOtpReq, usersController.validateLoginOtp);
