@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Event = require('../modules/event.module.js');
+const User = require('../modules/user.module.js');
 const ObjectId = require('mongoose').Types.ObjectId;
 const { GridFSBucket } = require('mongodb');
 const mongoose = require('mongoose');
