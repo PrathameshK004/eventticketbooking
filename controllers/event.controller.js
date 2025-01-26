@@ -8,6 +8,8 @@ const path = require('path');
 const { MongoClient } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const client = new MongoClient(process.env.CONNECTIONSTRING);
+require('dotenv').config();
+
 
 // Initialize GridFSBucket
 let bucket;
