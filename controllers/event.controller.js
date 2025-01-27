@@ -95,7 +95,7 @@ async function createEvent(req, res) {
             eventLanguage: req.body.eventLanguage,
             eventRating: req.body.eventRating ? parseFloat(req.body.eventRating) : undefined,
             eventCapacity: parseInt(req.body.eventCapacity),
-            eventDuration: req.body.eventDuration,
+            eventTime: req.body.eventTime,
             eventFeatures: eventFeatures,
             eventTags: eventTags,
             eventOrgInsta: req.body.eventOrgInsta,

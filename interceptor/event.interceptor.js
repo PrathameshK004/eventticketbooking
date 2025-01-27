@@ -37,7 +37,7 @@ function validateEventId(req, res, next) {
 function validateEventData(eventData, isUpdate = false) {
   const errors = [];
 
-  const requiredFields = ['eventTitle', 'eventDate', 'eventAddress', 'eventOrganizer', 'eventPrice', 'eventLanguage', 'eventDescription', 'eventDuration', 'eventCapacity'];
+  const requiredFields = ['eventTitle', 'eventDate', 'eventAddress', 'eventOrganizer', 'eventPrice', 'eventLanguage', 'eventDescription', 'eventTime', 'eventCapacity'];
   
   if (!isUpdate) {
     requiredFields.forEach(field => {
@@ -55,9 +55,33 @@ function validateEventData(eventData, isUpdate = false) {
     errors.push('Event capacity cannot be less than 1.');
   }
 
-  if (eventData.eventDuration && !/^\d+\s+(hours?|minutes?)$/.test(eventData.eventDuration)) {
-    errors.push(`${eventData.eventDuration} is not a valid duration format! Use "X hours" or "Y minutes".`);
+  // Assuming eventData is the object containing event details
+if (eventData.eventTime) {
+  const { startTime, endTime } = eventData.eventTime;
+
+  // Validate startTime
+  if (!/^\d{2}:\d{2}$/.test(startTime)) {
+    errors.push(`Invalid startTime format. It should be in the format "HH:mm", e.g., "14:30".`);
   }
+
+  // Validate endTime
+  if (!/^\d{2}:\d{2}$/.test(endTime)) {
+    errors.push(`Invalid endTime format. It should be in the format "HH:mm", e.g., "14:30".`);
+  }
+
+  // Optionally, check if endTime is later than startTime
+  const [startHour, startMinute] = startTime.split(":").map(Number);
+  const [endHour, endMinute] = endTime.split(":").map(Number);
+
+  // Convert to minutes to easily compare
+  const startTotalMinutes = startHour * 60 + startMinute;
+  const endTotalMinutes = endHour * 60 + endMinute;
+
+  if (endTotalMinutes <= startTotalMinutes) {
+    errors.push(`endTime must be later than startTime.`);
+  }
+}
+
 
   
 
