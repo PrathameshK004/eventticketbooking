@@ -11,18 +11,15 @@ const eventSchema = new mongoose.Schema({
     eventLanguage: { type: String, required: true, trim: true },
     eventRating: { type: Number, min: 0, max: 5 },
     eventCapacity: { type: Number, required: true },
-    eventTime: {
-        startTime: { 
-            type: String, 
-            required: true, 
-            trim: true,
-            match: /^([01]?[0-9]|2[0-3]):([0-5]?[0-9])$/, 
-        },
-        endTime: { 
-            type: String, 
-            required: true, 
-            trim: true,
-            match: /^([01]?[0-9]|2[0-3]):([0-5]?[0-9])$/, 
+    eventDuration: { 
+        type: String, 
+        required: true, 
+        trim: true,
+        validate: {
+            validator: function(value) {
+                return /^\d+\s+(hours?|minutes?)$/.test(value);
+            },
+            message: props => `${props.value} is not a valid duration format! Use "X hours" or "Y minutes".`
         }
     },
     eventFeatures: [{ type: String, trim: true }], 
@@ -35,22 +32,11 @@ const eventSchema = new mongoose.Schema({
     totalAmount: {type: Number}
 }, { versionKey: false });
 
-// Middleware to handle combined event date and time
-eventSchema.pre('save', function(next) {
-    // Get the eventDate and eventTime (startTime and endTime)
-    const event = this;
-
-    // Combine eventDate with endTime for the end dateTime
-    const endDateTime = new Date(event.eventDate);
-    const [endHours, endMinutes] = event.eventTime.endTime.split(':');
-    endDateTime.setHours(parseInt(endHours, 10));
-    endDateTime.setMinutes(parseInt(endMinutes, 10));
-
-    // Update the eventDate with endDateTime (the final end date-time of the event)
-    event.eventDate = endDateTime;
-
-    next();
-});
+eventSchema.methods.toJSON = function() {
+    const event = this.toObject();
+    event.eventDate = event.eventDate.toISOString().split('T')[0]; // Format date as YYYY-MM-DD
+    return event;
+};
 
 
 const Event = mongoose.model('Event', eventSchema);

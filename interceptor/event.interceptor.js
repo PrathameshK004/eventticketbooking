@@ -37,8 +37,8 @@ function validateEventId(req, res, next) {
 function validateEventData(eventData, isUpdate = false) {
   const errors = [];
 
-  const requiredFields = ['eventTitle', 'eventDate', 'eventAddress', 'eventOrganizer', 'eventPrice', 'eventLanguage', 'eventDescription', 'eventTime', 'eventCapacity'];
-  
+  const requiredFields = ['eventTitle', 'eventDate', 'eventAddress', 'eventOrganizer', 'eventPrice', 'eventLanguage', 'eventDescription', 'eventDuration', 'eventCapacity'];
+
   if (!isUpdate) {
     requiredFields.forEach(field => {
       if (!eventData[field]) {
@@ -55,35 +55,9 @@ function validateEventData(eventData, isUpdate = false) {
     errors.push('Event capacity cannot be less than 1.');
   }
 
-  // Assuming eventData is the object containing event details
-if (eventData.eventTime) {
-  const { startTime, endTime } = eventData.eventTime;
-
-  // Validate startTime
-  if (!/^\d{2}:\d{2}$/.test(startTime)) {
-    errors.push(`Invalid startTime format. It should be in the format "HH:mm", e.g., "14:30".`);
+  if (eventData.eventDuration && !/^\d+\s+(hours?|minutes?)$/.test(eventData.eventDuration)) {
+    errors.push(`${eventData.eventDuration} is not a valid duration format! Use "X hours" or "Y minutes".`);
   }
-
-  // Validate endTime
-  if (!/^\d{2}:\d{2}$/.test(endTime)) {
-    errors.push(`Invalid endTime format. It should be in the format "HH:mm", e.g., "14:30".`);
-  }
-
-  // Optionally, check if endTime is later than startTime
-  const [startHour, startMinute] = startTime.split(":").map(Number);
-  const [endHour, endMinute] = endTime.split(":").map(Number);
-
-  // Convert to minutes to easily compare
-  const startTotalMinutes = startHour * 60 + startMinute;
-  const endTotalMinutes = endHour * 60 + endMinute;
-
-  if (endTotalMinutes <= startTotalMinutes) {
-    errors.push(`endTime must be later than startTime.`);
-  }
-}
-
-
-  
 
   if (eventData.eventDate && isDateInPast(eventData.eventDate)) {
     errors.push('Event date cannot be in the past.');
@@ -197,15 +171,15 @@ async function validateTokenReuse(req, res, next) {
     const tokenDoc = await Token.findOne({ token });
 
     if (!tokenDoc) {
-        return res.status(400).json({ message: "Invalid token" });
+      return res.status(400).json({ message: "Invalid token" });
     }
 
     if (tokenDoc.used) {
-        return res.status(400).json({ message: "Token has already been used" });
+      return res.status(400).json({ message: "Token has already been used" });
     }
 
     if (tokenDoc.expiresAt < new Date()) {
-        return res.status(400).json({ message: "Token has expired" });
+      return res.status(400).json({ message: "Token has expired" });
     }
 
     tokenDoc.used = true;
@@ -213,7 +187,7 @@ async function validateTokenReuse(req, res, next) {
 
     next();
 
-} catch (error) {
+  } catch (error) {
     res.status(500).json({ message: "Error validating token" });
-}
+  }
 }
