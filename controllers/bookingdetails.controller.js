@@ -6,6 +6,7 @@ const User = require('../modules/user.module.js');
 const mongoose = require('mongoose');
 const Wallet = require('../modules/wallet.module.js');
 const nodemailer = require('nodemailer');
+const jwt = require('jsonwebtoken');
 
 module.exports = {
     getAllBookings: getAllBookings,
