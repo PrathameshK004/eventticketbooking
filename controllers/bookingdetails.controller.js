@@ -84,7 +84,7 @@ async function createBooking(req, res) {
         }
 
         // Send confirmation email asynchronously
-        await sendBookingConfirmationEmail(user.email, newBooking[0], event);
+        await sendBookingConfirmationEmail(user.emailID, newBooking[0], event);
 
         res.status(201).json(newBooking[0]);
     } catch (error) {
@@ -163,7 +163,7 @@ async function createBookingWithWallet(req, res) {
         }
 
         // Send confirmation email asynchronously
-        await sendBookingConfirmationEmail(user.email, newBooking[0], event);
+        await sendBookingConfirmationEmail(user.emailID, newBooking[0], event);
 
         res.status(201).json(newBooking[0]);
     } catch (error) {
