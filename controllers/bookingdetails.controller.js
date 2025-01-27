@@ -39,7 +39,7 @@ async function getBookingById(req, res) {
 
         res.status(200).json(booking);
     } catch (err) {
-        res.status(500).json({ message: "Internal Server Error "+ err.message });
+        res.status(500).json({ message: "Internal Server Error " + err.message });
     }
 }
 
@@ -193,7 +193,7 @@ async function sendBookingConfirmationEmail(userEmail, booking, event) {
             },
         });
 
-        const eventDate = new Date(booking.eventDate).toDateString(); 
+        const eventDate = new Date(booking.eventDate).toDateString();
         const ticketTypes = ["Standard Pass", "Premium Pass", "Kid Pass"];
         let ticketDetails = [];
 
@@ -255,9 +255,9 @@ async function sendBookingConfirmationEmail(userEmail, booking, event) {
                 </div>
             `
         };
-        
+
         await transporter.sendMail(mailOptions);
-        
+
     } catch (error) {
         console.error("Failed to send booking confirmation email:", error);
     }
@@ -276,27 +276,57 @@ async function updateBooking(req, res) {
         // Find the booking and lock it for update
         const booking = await Booking.findById(bookingId).session(session);
         if (!booking) {
+            await session.abortTransaction();
             return res.status(404).json({ error: 'Booking not found' });
         }
 
-        // Calculate the sum of the array of `noOfPeoples`
+        // Calculate total number of people
         const totalPeople = Array.isArray(booking.noOfPeoples)
             ? booking.noOfPeoples.reduce((sum, num) => sum + num, 0)
             : 0;
 
-        // Prevent changing from "Cancelled" or "Completed" back to "Booked"
+        // Prevent invalid status changes
         if ((booking.book_status === 'Cancelled' || booking.book_status === 'Completed') && updatedStatus === 'Booked') {
+            await session.abortTransaction();
             return res.status(400).json({ error: 'Cancelled or completed bookings cannot be rebooked' });
         }
 
-        // Prevent changing from "Cancelled" to "Completed"
         if (booking.book_status === 'Cancelled' && updatedStatus === 'Completed') {
+            await session.abortTransaction();
             return res.status(400).json({ error: 'Cancelled bookings cannot be marked as completed' });
         }
 
-        // Allow cancellation only if the current status is "Booked"
         if (updatedStatus === 'Cancelled' && booking.book_status !== 'Booked') {
+            await session.abortTransaction();
             return res.status(400).json({ error: 'Only "Booked" bookings can be cancelled' });
+        }
+
+        if (updatedStatus === 'Completed') {
+            try {
+                const token = req.cookies.jwt;
+                if (!token) {
+                    await session.abortTransaction();
+                    return res.status(401).json({ error: 'No token provided.' });
+                }
+
+                const decoded = jwt.verify(token, process.env.JWTSecret);
+                const userTokenId = decoded.key;
+
+                // Fetch event and lock it in session
+                const event = await Event.findById(booking.eventId).session(session);
+                if (!event) {
+                    await session.abortTransaction();
+                    return res.status(404).json({ error: 'Event not found' });
+                }
+
+                if (!event.userId.equals(userTokenId)) {
+                    await session.abortTransaction();
+                    return res.status(403).json({ error: 'You are not authorized to update the booking status.' });
+                }
+            } catch (err) {
+                await session.abortTransaction();
+                return res.status(401).json({ error: 'Invalid token.' });
+            }
         }
 
         if (updatedStatus && updatedStatus !== booking.book_status) {
@@ -304,6 +334,7 @@ async function updateBooking(req, res) {
                 // Find the event and lock it for update
                 const event = await Event.findById(booking.eventId).session(session);
                 if (!event) {
+                    await session.abortTransaction();
                     return res.status(404).json({ error: 'Event not found' });
                 }
 
@@ -313,11 +344,12 @@ async function updateBooking(req, res) {
                 // Fetch user's wallet and lock it for update
                 let wallet = await Wallet.findOne({ userId: booking.userId }).session(session);
                 if (!wallet) {
+                    await session.abortTransaction();
                     return res.status(404).json({ error: 'Wallet not found for the user' });
                 }
 
                 // Process the refund
-                const refundAmount = booking.totalAmount; // Assuming totalAmount is stored in booking
+                const refundAmount = booking.totalAmount;
                 wallet.balance += refundAmount;
                 event.totalAmount -= refundAmount;
 
@@ -343,17 +375,16 @@ async function updateBooking(req, res) {
 
         // Commit transaction
         await session.commitTransaction();
-        session.endSession();
-
         res.status(200).json(booking);
     } catch (err) {
         // Rollback transaction on failure
         await session.abortTransaction();
-        session.endSession();
-
         res.status(500).json({ error: 'Internal server error: ' + err.message });
+    } finally {
+        session.endSession();
     }
 }
+
 
 
 async function deleteBooking(req, res) {
@@ -361,14 +392,14 @@ async function deleteBooking(req, res) {
 
     try {
         const booking = await Booking.findByIdAndDelete(bookingId);
-        
+
         if (!booking) {
             return res.status(404).json({ error: 'Booking not found' });
         }
 
         return res.status(204).end();
     } catch (err) {
-        return res.status(500).json({ error: 'Internal server error ' +err});
+        return res.status(500).json({ error: 'Internal server error ' + err });
     }
 }
 
@@ -395,7 +426,7 @@ async function getEventBookings(req, res) {
 
     try {
         // Fetch bookings for the given eventId
-        const bookings = await Booking.find({ eventId: eventId  });
+        const bookings = await Booking.find({ eventId: eventId });
 
         // Check if any bookings were found
         if (bookings.length === 0) {

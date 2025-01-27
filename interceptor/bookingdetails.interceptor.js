@@ -125,21 +125,6 @@ async function validateUpdateBooking(req, res, next) {
         if (!eventDetails) {
             return res.status(404).json({ error: 'Event not found.' });
         }
-
-        const userId = eventDetails.userId; 
-
-        const token = req.cookies.jwt;
-        if (!token) {
-            return res.status(401).json({ error: 'No token provided.' });
-        }
-
-        const decoded = jwt.verify(token, process.env.JWTSecret);
-        const userTokenId = decoded.key;
-
-        if (userId.toString() !== userTokenId) {
-            return res.status(403).json({ error: 'You are not organizer to update the booking status.' });
-        }
-
         next();
     } catch (error) {
         console.error(error); 
