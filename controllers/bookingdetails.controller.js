@@ -304,7 +304,7 @@ async function updateBooking(req, res) {
 
         if (updatedStatus === 'Completed') {
             try {
-                const token = req.cookies.jwt || req.headers.authorization?.split(" ")[1];;
+                const token = req.cookies.jwt;
                 if (!token) {
                     await session.abortTransaction();
                     return res.status(401).json({ error: 'No token provided.' });
@@ -327,6 +327,7 @@ async function updateBooking(req, res) {
             } catch (err) {
                 await session.abortTransaction();
                 return res.status(401).json({ error: 'Invalid token.' });
+                console.log(err);
             }
         }
 
