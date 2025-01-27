@@ -33,7 +33,8 @@ module.exports = {
     sendEnquiry,
     getAllEnquiries,
     respondToEnquiry,
-    sendOrgEnquiry
+    sendOrgEnquiry,
+    getEnquiryByUserId
 };
 
 async function sendEnquiry(req, res) {
@@ -46,6 +47,28 @@ async function sendEnquiry(req, res) {
         res.status(500).json({ error: 'Failed to send enquiry' });
     }
 };
+
+
+async function getEnquiryByUserId(req, res) {
+    try {
+        const userId = req.params.userId;
+
+        if (!userId) {
+            return res.status(400).json({ error: "User ID is required." });
+        }
+
+        const enquiries = await Enquiry.find({ userId });
+
+        if (!enquiries.length) {
+            return res.status(404).json({ message: "No enquiries found for this user." });
+        }
+
+        res.status(200).json(enquiries);
+    } catch (error) {
+        console.error("Error fetching enquiries:", error);
+        res.status(500).json({ error: "An error occurred while fetching enquiries." });
+    }
+}
 
 async function sendOrgEnquiry(req, res) {
     try {
@@ -80,7 +103,6 @@ async function sendOrgEnquiry(req, res) {
                     uploadStream.end(encryptedBuffer);
 
                     uploadStream.on('finish', async (file) => {
-                        console.log('Encrypted file uploaded successfully');
                         resolve(file._id);
                     });
 
@@ -128,7 +150,7 @@ const createToken = (key) => { // Update to key from id
 
 async function respondToEnquiry(req, res) {
     try {
-        const { status } = req.body;
+        const { status, remarks } = req.body;
         const enquiry = await Enquiry.findById(req.params.enquiryId);
         if (!enquiry) {
             return res.status(404).json({ error: 'Enquiry not found' });
@@ -226,6 +248,7 @@ async function respondToEnquiry(req, res) {
 
             // Update the enquiry status
             enquiry.status = status;
+            enquiry.remarks = remarks;
             await enquiry.save();
         }
 

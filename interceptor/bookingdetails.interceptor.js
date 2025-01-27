@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const Booking = require('../modules/bookingdetails.module');
 const User = require('../modules/user.module'); 
 const Event = require('../modules/event.module'); 
+const jwt = require('jsonwebtoken');
 
 const app = express();
 app.use(bodyParser.json());
@@ -102,8 +103,8 @@ async function validateUpdateBooking(req, res, next) {
     const { bookingId } = req.params;
     const { book_status } = req.body;
 
-    if (!isUuidValid(bookingId)) {
-        return res.status(400).json({ error: 'Invalid booking ID. Please provide a valid UUID.' });
+    if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+        return res.status(400).json({ error: 'Invalid booking ID. Please provide a valid ObjectId.' });
     }
 
     if (!book_status || !['Booked', 'Cancelled', 'Completed'].includes(book_status)) {
@@ -120,9 +121,29 @@ async function validateUpdateBooking(req, res, next) {
             return res.status(400).json({ error: 'New booking status must be different from the current status.' });
         }
 
+        const eventDetails = await Event.findById(existingBooking.eventId);
+        if (!eventDetails) {
+            return res.status(404).json({ error: 'Event not found.' });
+        }
+
+        const userId = eventDetails.userId; 
+
+        const token = req.cookies.jwt;
+        if (!token) {
+            return res.status(401).json({ error: 'No token provided.' });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWTSecret);
+        const userTokenId = decoded.key;
+
+        if (userId.toString() !== userTokenId) {
+            return res.status(403).json({ error: 'You are not organizer to update the booking status.' });
+        }
+
         next();
     } catch (error) {
-        res.status(500).json({ error: 'An error occurred while validating the booking. ' + error });
+        console.error(error); 
+        res.status(500).json({ error: 'An error occurred while validating the booking.', details: error.message });
     }
 }
 

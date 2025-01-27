@@ -31,6 +31,7 @@ const upload = multer({
 router.post('/sendEnquiry', verifyToken, enquiryInterceptor.validateNewEnquiry, enquiryInterceptor.validateUserId, enquiryController.sendEnquiry);
 router.post('/sendAddOrgEnquiry', verifyToken, upload.single('file'), enquiryInterceptor.validateNewOrgEnquiry, enquiryInterceptor.validateUserId, enquiryController.sendOrgEnquiry);
 router.get('/allEnquiries/:adminId', verifyToken, enquiryInterceptor.validateAdminAndEnquiry, enquiryController.getAllEnquiries);
+router.get('/getEnquiryByUserId/:userId', verifyToken, enquiryInterceptor.validateUserId, enquiryController.getEnquiryByUserId);
 router.put('/respondEnquiry/:enquiryId/:adminId', verifyToken, enquiryInterceptor.validateEnquiryId, enquiryInterceptor.validateAdminAndEnquiry, enquiryInterceptor.validateEnquiryResponse, enquiryController.respondToEnquiry);
 
 module.exports = router;

@@ -45,73 +45,76 @@ async function getBookingById(req, res) {
 
 
 async function createBooking(req, res) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
+        const { userId, eventId, noOfPeoples, totalAmount } = req.body;
+
         // Calculate the sum of the array of `noOfPeoples`
-        const totalPeople = Array.isArray(req.body.noOfPeoples)
-            ? req.body.noOfPeoples.reduce((sum, num) => sum + num, 0)
-            : 0;
+        const totalPeople = Array.isArray(noOfPeoples) ? noOfPeoples.reduce((sum, num) => sum + num, 0) : 0;
 
-        // Create the booking
-        const newBooking = await Booking.create(req.body);
-
-        // Find the event by eventId and update its capacity
-        const event = await Event.findById(req.body.eventId);
-        if (event) {
-            // Decrement the event capacity by the total number of people
-            event.eventCapacity -= totalPeople;
-
-            // Ensure event capacity doesn't go below zero
-            if (event.eventCapacity < 0) {
-                // Rollback booking if capacity is exceeded
-                await Booking.findByIdAndDelete(newBooking._id);
-                return res.status(400).json({ message: "Not enough capacity for this booking." });
-            }
-
-            // Save the updated event
-            await event.save();
-        } else {
-            // Rollback booking if event is not found
-            await Booking.findByIdAndDelete(newBooking._id);
+        // Find the event and lock it for update
+        const event = await Event.findById(eventId).session(session);
+        if (!event) {
             return res.status(404).json({ message: "Event not found" });
         }
 
-        // Fetch user's email using userId from the newBooking
-        const user = await User.findById(newBooking.userId);
+        // Ensure event has enough capacity
+        if (event.eventCapacity < totalPeople) {
+            return res.status(400).json({ message: "Not enough capacity for this booking." });
+        }
+
+        // Create the booking within the transaction
+        const newBooking = await Booking.create([{ ...req.body }], { session });
+
+        // Update event capacity and total amount
+        event.eventCapacity -= totalPeople;
+        event.totalAmount = (event.totalAmount || 0) + totalAmount;
+        await event.save({ session });
+
+        // Commit transaction
+        await session.commitTransaction();
+        session.endSession();
+
+        // Fetch user email (outside transaction)
+        const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Send confirmation email to user
-        await sendBookingConfirmationEmail(user.emailID, newBooking, event);
+        // Send confirmation email asynchronously
+        await sendBookingConfirmationEmail(user.email, newBooking[0], event);
 
-        // Respond with the created booking
-        res.status(201).json(newBooking);
+        res.status(201).json(newBooking[0]);
     } catch (error) {
+        // Rollback transaction on failure
+        await session.abortTransaction();
+        session.endSession();
+
         if (error.name === 'ValidationError') {
-            const errorMessages = Object.values(error.errors).map(err => err.message);
             return res.status(400).json({
                 message: "Validation error occurred",
-                errors: errorMessages,
+                errors: Object.values(error.errors).map(err => err.message),
             });
         }
 
-        res.status(500).json({ message: "Internal server error " + error.message });
+        res.status(500).json({ message: "Internal server error: " + error.message });
     }
 }
 
-
 async function createBookingWithWallet(req, res) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
+        const { userId, eventId, noOfPeoples, totalAmount } = req.body;
+
         // Calculate the sum of the array of `noOfPeoples`
-        const totalPeople = Array.isArray(req.body.noOfPeoples)
-            ? req.body.noOfPeoples.reduce((sum, num) => sum + num, 0)
-            : 0;
+        const totalPeople = Array.isArray(noOfPeoples) ? noOfPeoples.reduce((sum, num) => sum + num, 0) : 0;
 
-        // Calculate the total amount (you can adjust this logic if you have a different way to calculate the amount)
-        const totalAmount = req.body.totalAmount;
-
-        // Fetch user's wallet balance using userId from the request body
-        const wallet = await Wallet.findOne({ userId: req.body.userId });
+        // Fetch wallet within transaction
+        const wallet = await Wallet.findOne({ userId }).session(session);
         if (!wallet) {
             return res.status(404).json({ message: "Wallet not found for the user" });
         }
@@ -121,67 +124,63 @@ async function createBookingWithWallet(req, res) {
             return res.status(400).json({ message: "Insufficient wallet balance for the booking" });
         }
 
-        // Create the booking
-        const newBooking = await Booking.create(req.body);
-
-        // Find the event by eventId and update its capacity
-        const event = await Event.findById(req.body.eventId);
-        if (event) {
-            // Decrement the event capacity by the total number of people
-            event.eventCapacity -= totalPeople;
-
-            // Ensure event capacity doesn't go below zero
-            if (event.eventCapacity < 0) {
-                // Rollback booking if capacity is exceeded
-                await Booking.findByIdAndDelete(newBooking._id);
-                return res.status(400).json({ message: "Not enough capacity for this booking." });
-            }
-
-            // Save the updated event
-            await event.save();
-        } else {
-            // Rollback booking if event is not found
-            await Booking.findByIdAndDelete(newBooking._id);
+        // Find the event and lock it for update
+        const event = await Event.findById(eventId).session(session);
+        if (!event) {
             return res.status(404).json({ message: "Event not found" });
         }
 
-        // Debit the wallet balance by the total amount of the booking
-        wallet.balance -= totalAmount;
+        // Ensure event has enough capacity
+        if (event.eventCapacity < totalPeople) {
+            return res.status(400).json({ message: "Not enough capacity for this booking." });
+        }
 
-        // Record the transaction in the wallet
+        // Create the booking within the transaction
+        const newBooking = await Booking.create([{ ...req.body }], { session });
+
+        // Update event capacity and total amount
+        event.eventCapacity -= totalPeople;
+        event.totalAmount = (event.totalAmount || 0) + totalAmount;
+        await event.save({ session });
+
+        // Deduct wallet balance and record transaction
+        wallet.balance -= totalAmount;
         wallet.transactions.push({
             amount: totalAmount,
             type: 'Debit',
-            description: `Booking payment for event: ${event.eventTitle}`
+            description: `Booking payment for event: ${event.eventTitle}`,
         });
+        await wallet.save({ session });
 
-        // Save the updated wallet
-        await wallet.save();
+        // Commit transaction
+        await session.commitTransaction();
+        session.endSession();
 
-        // Fetch user's email using userId from the newBooking
-        const user = await User.findById(newBooking.userId);
+        // Fetch user email (outside transaction)
+        const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Send confirmation email to user
-        await sendBookingConfirmationEmail(user.emailID, newBooking, event);
+        // Send confirmation email asynchronously
+        await sendBookingConfirmationEmail(user.email, newBooking[0], event);
 
-        // Respond with the created booking
-        res.status(201).json(newBooking);
+        res.status(201).json(newBooking[0]);
     } catch (error) {
+        // Rollback transaction on failure
+        await session.abortTransaction();
+        session.endSession();
+
         if (error.name === 'ValidationError') {
-            const errorMessages = Object.values(error.errors).map(err => err.message);
             return res.status(400).json({
                 message: "Validation error occurred",
-                errors: errorMessages,
+                errors: Object.values(error.errors).map(err => err.message),
             });
         }
 
-        res.status(500).json({ message: "Internal server error " + error.message });
+        res.status(500).json({ message: "Internal server error: " + error.message });
     }
 }
-
 
 
 async function sendBookingConfirmationEmail(userEmail, booking, event) {
@@ -267,12 +266,15 @@ async function sendBookingConfirmationEmail(userEmail, booking, event) {
 
 
 async function updateBooking(req, res) {
-    const bookingId = req.params.bookingId;
-    const updatedStatus = req.body.book_status; // Only update status
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
     try {
-        const booking = await Booking.findById(bookingId);
+        const bookingId = req.params.bookingId;
+        const updatedStatus = req.body.book_status;
 
+        // Find the booking and lock it for update
+        const booking = await Booking.findById(bookingId).session(session);
         if (!booking) {
             return res.status(404).json({ error: 'Booking not found' });
         }
@@ -297,33 +299,39 @@ async function updateBooking(req, res) {
             return res.status(400).json({ error: 'Only "Booked" bookings can be cancelled' });
         }
 
-        // Update only if status is being changed
         if (updatedStatus && updatedStatus !== booking.book_status) {
             if (updatedStatus === 'Cancelled') {
-                const event = await Event.findById(booking.eventId);
-                if (event) {
-                    // Increment the event capacity by the total number of people
-                    event.eventCapacity += totalPeople;
-                    await event.save();
-                } else {
+                // Find the event and lock it for update
+                const event = await Event.findById(booking.eventId).session(session);
+                if (!event) {
                     return res.status(404).json({ error: 'Event not found' });
                 }
 
-                // Fetch user wallet
-                let wallet = await Wallet.findOne({ userId: booking.userId });
+                // Increment event capacity
+                event.eventCapacity += totalPeople;
+
+                // Fetch user's wallet and lock it for update
+                let wallet = await Wallet.findOne({ userId: booking.userId }).session(session);
+                if (!wallet) {
+                    return res.status(404).json({ error: 'Wallet not found for the user' });
+                }
 
                 // Process the refund
                 const refundAmount = booking.totalAmount; // Assuming totalAmount is stored in booking
                 wallet.balance += refundAmount;
+                event.totalAmount -= refundAmount;
+
+                // Record transaction in wallet
                 wallet.transactions.push({
                     amount: refundAmount,
                     type: 'Credit',
                     description: `Refund for cancelled transaction ID: ${booking.transactionId}`
                 });
 
-                await wallet.save(); // Save wallet changes
+                await event.save({ session });
+                await wallet.save({ session });
 
-                // Update payment status to "Refunded"
+                // Update payment status
                 booking.pay_status = 'Amount Refunded to Wallet';
             }
 
@@ -331,10 +339,19 @@ async function updateBooking(req, res) {
             booking.book_status = updatedStatus;
         }
 
-        await booking.save(); // Save the booking with the updated status
+        await booking.save({ session });
+
+        // Commit transaction
+        await session.commitTransaction();
+        session.endSession();
+
         res.status(200).json(booking);
     } catch (err) {
-        res.status(500).json({ error: 'Internal server error ' + err });
+        // Rollback transaction on failure
+        await session.abortTransaction();
+        session.endSession();
+
+        res.status(500).json({ error: 'Internal server error: ' + err.message });
     }
 }
 

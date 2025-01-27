@@ -8,7 +8,8 @@ const EnquirySchema = new mongoose.Schema({
     status: { type: String, default: 'Pending', enum: ['Pending', 'Accepted', 'Rejected'] },
     createdAt: { type: Date, default: Date.now },
     fileId: {type: String},
-    imageUrl: {type: String}
+    imageUrl: {type: String},
+    remarks: {type: String}
 });
 
 

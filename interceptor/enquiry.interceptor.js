@@ -51,7 +51,7 @@ async function validateAdminAndEnquiry(req, res, next) {
 }
 
 async function validateUserId(req, res, next) {
-    const { userId } = req.body;
+    const { userId } = req.body || req.params.userId;
     if (!userId || !isUuidValid(userId)) {
         return res.status(400).json({ error: 'User ID is required and must be a valid UUID.' });
     }
@@ -128,7 +128,7 @@ async function validateNewOrgEnquiry(req, res, next) {
 
 async function validateEnquiryResponse(req, res, next) {
     const { enquiryId } = req.params;
-    const { status } = req.body;
+    const { status, remarks } = req.body;
 
     if (!isUuidValid(enquiryId)) {
         return res.status(400).json({ error: 'Invalid enquiry ID. Please provide a valid UUID.' });
@@ -136,6 +136,10 @@ async function validateEnquiryResponse(req, res, next) {
 
     if (!status || !['Pending', 'Accepted', 'Rejected'].includes(status)) {
         return res.status(400).json({ error: 'Status is required and must be either Pending, Accepted, or Rejected.' });
+    }
+
+    if (!remarks) {
+        return res.status(400).json({ error: 'Status is required.' });
     }
 
     try {
