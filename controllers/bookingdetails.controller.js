@@ -325,9 +325,11 @@ async function updateBooking(req, res) {
                     return res.status(403).json({ error: 'You are not authorized to update the booking status.' });
                 }
             } catch (err) {
+                console.error("JWT Verification Error:", err.message);
+                console.log(err.message);
                 await session.abortTransaction();
                 return res.status(401).json({ error: 'Invalid token.' });
-                console.log(err);
+                
             }
         }
 
