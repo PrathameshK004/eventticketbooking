@@ -320,7 +320,7 @@ async function updateBooking(req, res) {
                     return res.status(404).json({ error: 'Event not found' });
                 }
 
-                if (!event.userId.equals(userTokenId)) {
+                if (!event.userId.toString() === userTokenId) {
                     await session.abortTransaction();
                     return res.status(403).json({ error: 'You are not authorized to update the booking status.' });
                 }
