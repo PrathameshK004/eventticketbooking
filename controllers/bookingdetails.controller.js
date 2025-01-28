@@ -87,13 +87,12 @@ async function createBooking(req, res) {
 
         await sendBookingConfirmationEmail(user.emailID, newBooking[0], event);
 
-        await notificationController.sendNotification("bookings", "Booking Confirmed", `Your booking for  "${event.eventTitle}" has been confirmed.`, userId)
-            .then(notification => {
-                console.log("Notification created successfully:", notification);
-            })
-            .catch(err => {
-                console.error("Failed to create notification:", err);
-            });
+        try {
+            await notificationController.sendNotification("bookings", "Booking Confirmed", `Your booking for  "${event.eventTitle}" has been confirmed.`, userId)
+        }
+        catch (err) {
+            console.error("Failed to create notification:", err);
+        }
 
         res.status(201).json(newBooking[0]);
     } catch (error) {
@@ -172,13 +171,12 @@ async function createBookingWithWallet(req, res) {
         }
 
         await sendBookingConfirmationEmail(user.emailID, newBooking[0], event);
-        awaitnotificationController.sendNotification("bookings", "Booking Confirmed", `Your booking for  "${event.eventTitle}" has been confirmed.`, userId)
-            .then(notification => {
-                console.log("Notification created successfully:", notification);
-            })
-            .catch(err => {
-                console.error("Failed to create notification:", err);
-            });
+        try {
+            await notificationController.sendNotification("bookings", "Booking Confirmed", `Your booking for  "${event.eventTitle}" has been confirmed.`, userId)
+        }
+        catch (err) {
+            console.error("Failed to create notification:", err);
+        }
 
         res.status(201).json(newBooking[0]);
     } catch (error) {

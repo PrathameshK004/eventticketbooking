@@ -174,13 +174,12 @@ async function respondToEnquiry(req, res) {
             user.roles.addToSet(1);
             await user.save();
 
-            await notificationController.sendNotification("enquiry", "Request Approved", "Your Request to become Organizer has been Accepted.", enquiry.userId)
-                .then(notification => {
-                    console.log("Notification created successfully:", notification);
-                })
-                .catch(err => {
-                    console.error("Failed to create notification:", err);
-                });
+            try {
+                await notificationController.sendNotification("enquiry", "Request Approved", "Your Request to become Organizer has been Accepted.", enquiry.userId)
+            }
+            catch (err) {
+                console.error("Failed to create notification:", err);
+            }
 
         }
 
@@ -255,13 +254,12 @@ async function respondToEnquiry(req, res) {
 
             // Send the email
             await transporter.sendMail(mailOptions);
-            await notificationController.sendNotification("enquiry", "Request Approved", "Your Request to Add Event has been Accepted, Please check your mail", enquiry.userId)
-                .then(notification => {
-                    console.log("Notification created successfully:", notification);
-                })
-                .catch(err => {
-                    console.error("Failed to create notification:", err);
-                });
+            try {
+                await notificationController.sendNotification("enquiry", "Request Approved", "Your Request to Add Event has been Accepted, Please check your mail", enquiry.userId)
+            }
+            catch (err) {
+                console.error("Failed to create notification:", err);
+            }
 
         }
 
@@ -273,13 +271,12 @@ async function respondToEnquiry(req, res) {
                 return res.status(404).json({ message: 'User not found' });
             }
 
-            await notificationController.sendNotification("enquiry", "Request Approved", `Your request for enquiry "${enquiry.message}" has been accepted. Please check your mail.`, enquiry.userId)
-                .then(notification => {
-                    console.log("Notification created successfully:", notification);
-                })
-                .catch(err => {
-                    console.error("Failed to create notification:", err);
-                });
+            try {
+                await notificationController.sendNotification("enquiry", "Request Approved", `Your request for enquiry "${enquiry.message}" has been accepted. Please check your mail.`, enquiry.userId)
+            }
+            catch (err) {
+                console.error("Failed to create notification:", err);
+            }
 
         }
 
@@ -290,13 +287,12 @@ async function respondToEnquiry(req, res) {
                 return res.status(404).json({ message: 'User not found' });
             }
 
-            await notificationController.sendNotification("enquiry", "Request Rejected", `Your request for enquiry "${enquiry.type}" has been declined.`, enquiry.userId)
-                .then(notification => {
-                    console.log("Notification created successfully:", notification);
-                })
-                .catch(err => {
-                    console.error("Failed to create notification:", err);
-                });
+            try {
+                await notificationController.sendNotification("enquiry", "Request Rejected", `Your request for enquiry "${enquiry.type}" has been declined.`, enquiry.userId)
+            }
+            catch (err) {
+                console.error("Failed to create notification:", err);
+            }
 
 
         }
