@@ -1,7 +1,9 @@
 const Wallet = require('../modules/wallet.module.js');
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const User = require('../modules/user.module.js');
+const Event = require('../modules/event.module.js');
 const jwt = require('jsonwebtoken');
 const ObjectId = require('mongoose').Types.ObjectId;
 const nodemailer = require('nodemailer');
@@ -26,8 +28,14 @@ module.exports = {
     validateAdminLogin,
     makeAdmin,
     removeAdmin,
-    getRoles
+    getRoles,
+    getHoldBalance
 };
+
+function isUuidValid(userId) {
+
+  return mongoose.Types.ObjectId.isValid(userId);
+}
 
 const generateOTP = () => Math.floor(1000 + Math.random() * 9000);
 
@@ -600,3 +608,27 @@ async function removeAdmin(req, res) {
         return res.status(500).json({ message: 'Server error, please try again later' });
     }
 }
+
+
+async function getHoldBalance(req, res) {
+    try {
+        const userId = req.params.userId;
+
+        if (!userId || !isUuidValid(userId)) {
+            return res.status(400).json({ error: 'User ID is required and must be a valid UUID.' });
+        }
+
+        const events = await Event.find({ userId });
+
+        if (!events.length) {
+            return res.status(404).json({ error: 'No events found for the given User ID.' });
+        }
+
+        const totalHoldBalance = events.reduce((sum, event) => sum + (event.totalAmount || 0), 0);
+
+        res.status(200).json({ holdBalance: totalHoldBalance });
+    } catch (error) {
+        res.status(500).json({ error: 'An error occurred while fetching the hold balance: ' + error.message });
+    }
+}
+
