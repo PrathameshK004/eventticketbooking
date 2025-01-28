@@ -1,4 +1,4 @@
-const User = require('../module/user.module'); 
+const User = require('../modules/user.module'); 
 const mongoose = require('mongoose');
 
 module.exports = {
