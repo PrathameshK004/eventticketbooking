@@ -20,15 +20,13 @@ async function sendNotification(type, title, message, userId){
 
 async function getNotifications(req, res){
     try {
-        const { userId, adminId } = req.params;
+        const userId = req.params.userId;
         
         let notifications;
         if (userId) {
             notifications = await Notification.find({ userId }).sort({ createdAt: -1 });
-        } else if (adminId) {
-            notifications = await Notification.find({ userId: adminId }).sort({ createdAt: -1 });
         }
-
+        
         if (!notifications || !notifications.length) {
             return res.status(404).json({ message: "No notifications found." });
         }
