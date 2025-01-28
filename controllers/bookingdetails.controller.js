@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const Wallet = require('../modules/wallet.module.js');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
+let notificationController = require('./notification.controller');
 
 module.exports = {
     getAllBookings: getAllBookings,
@@ -86,10 +87,13 @@ async function createBooking(req, res) {
 
         await sendBookingConfirmationEmail(user.emailID, newBooking[0], event);
 
-        await sendNotification(
-                        "bookings", "Booking Confirmed", `Your booking for  "${event.eventTitle}" has been confirmed.`, userId)
-                        .then(() => console.log("Notification created successfully"))
-                        .catch(err => console.error("Failed to create notification:", err));
+        await notificationController.sendNotification("bookings", "Booking Confirmed", `Your booking for  "${event.eventTitle}" has been confirmed.`, userId)
+            .then(notification => {
+                console.log("Notification created successfully:", notification);
+            })
+            .catch(err => {
+                console.error("Failed to create notification:", err);
+            });
 
         res.status(201).json(newBooking[0]);
     } catch (error) {
@@ -168,12 +172,14 @@ async function createBookingWithWallet(req, res) {
         }
 
         await sendBookingConfirmationEmail(user.emailID, newBooking[0], event);
+        awaitnotificationController.sendNotification("bookings", "Booking Confirmed", `Your booking for  "${event.eventTitle}" has been confirmed.`, userId)
+            .then(notification => {
+                console.log("Notification created successfully:", notification);
+            })
+            .catch(err => {
+                console.error("Failed to create notification:", err);
+            });
 
-        await sendNotification(
-            "bookings", "Booking Confirmed", `Your booking for  "${event.eventTitle}" has been confirmed.`, userId)
-            .then(() => console.log("Notification created successfully"))
-            .catch(err => console.error("Failed to create notification:", err));
-            
         res.status(201).json(newBooking[0]);
     } catch (error) {
         // Rollback transaction on failure
@@ -336,7 +342,7 @@ async function updateBooking(req, res) {
                 console.error("JWT Verification Error:", err.message);
                 await session.abortTransaction();
                 return res.status(401).json({ error: 'Invalid token.' });
-                
+
             }
         }
 

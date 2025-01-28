@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { MongoClient } = require('mongodb');
 const client = new MongoClient(process.env.CONNECTIONSTRING);
-const sendNotification = require("./notification.controller");
+let notificationController = require('./notification.controller');
 
 // MongoDB Connection and GridFS setup
 let bucket;
@@ -173,9 +173,15 @@ async function respondToEnquiry(req, res) {
 
             user.roles.addToSet(1);
             await user.save();
-            await sendNotification("enquiry", "Request Approved", "Your Request to become Organizer has been Accepted.", enquiry.userId)
-                .then(() => console.log("Notification created successfully"))
-                .catch(err => console.error("Failed to create notification:", err));
+
+            await notificationController.sendNotification("enquiry", "Request Approved", "Your Request to become Organizer has been Accepted.", enquiry.userId)
+                .then(notification => {
+                    console.log("Notification created successfully:", notification);
+                })
+                .catch(err => {
+                    console.error("Failed to create notification:", err);
+                });
+
         }
 
         if (status === "Accepted" && enquiry.type === "Event Request") {
@@ -249,13 +255,16 @@ async function respondToEnquiry(req, res) {
 
             // Send the email
             await transporter.sendMail(mailOptions);
-
-            await sendNotification("enquiry", "Request Approved", "Your Request to Add Event has been Accepted, Please check your mail", enquiry.userId)
-                .then(() => console.log("Notification created successfully"))
-                .catch(err => console.error("Failed to create notification:", err));
+            await notificationController.sendNotification("enquiry", "Request Approved", "Your Request to Add Event has been Accepted, Please check your mail", enquiry.userId)
+                .then(notification => {
+                    console.log("Notification created successfully:", notification);
+                })
+                .catch(err => {
+                    console.error("Failed to create notification:", err);
+                });
 
         }
-        
+
 
         if (status === "Accepted" && enquiry.type === "Event Request") {
 
@@ -264,10 +273,13 @@ async function respondToEnquiry(req, res) {
                 return res.status(404).json({ message: 'User not found' });
             }
 
-            await sendNotification(
-                "enquiry", "Request Approved", `Your request for enquiry "${enquiry.message}" has been accepted. Please check your mail.`, enquiry.userId)
-                .then(() => console.log("Notification created successfully"))
-                .catch(err => console.error("Failed to create notification:", err));
+            await notificationController.sendNotification("enquiry", "Request Approved", `Your request for enquiry "${enquiry.message}" has been accepted. Please check your mail.`, enquiry.userId)
+                .then(notification => {
+                    console.log("Notification created successfully:", notification);
+                })
+                .catch(err => {
+                    console.error("Failed to create notification:", err);
+                });
 
         }
 
@@ -278,10 +290,14 @@ async function respondToEnquiry(req, res) {
                 return res.status(404).json({ message: 'User not found' });
             }
 
-            await sendNotification(
-                "enquiry", "Request Rejected", `Your request for enquiry "${enquiry.type}" has been declined.`, enquiry.userId)
-                .then(() => console.log("Notification created successfully"))
-                .catch(err => console.error("Failed to create notification:", err));
+            await notificationController.sendNotification("enquiry", "Request Rejected", `Your request for enquiry "${enquiry.type}" has been declined.`, enquiry.userId)
+                .then(notification => {
+                    console.log("Notification created successfully:", notification);
+                })
+                .catch(err => {
+                    console.error("Failed to create notification:", err);
+                });
+
 
         }
 
