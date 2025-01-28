@@ -266,7 +266,7 @@ async function respondToEnquiry(req, res) {
         }
 
 
-        if (status === "Accepted" && enquiry.type === "Event Request") {
+        if (status === "Accepted" && enquiry.type === "Other") {
 
             const user = await User.findById(enquiry.userId);
             if (!user) {
