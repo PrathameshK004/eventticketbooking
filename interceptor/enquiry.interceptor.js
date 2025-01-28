@@ -51,7 +51,7 @@ async function validateAdminAndEnquiry(req, res, next) {
 }
 
 async function validateUserId(req, res, next) {
-    const { userId } = req.body || req.params.userId;
+    const userId = req.body?.userId || req.params?.userId;
     if (!userId || !isUuidValid(userId)) {
         return res.status(400).json({ error: 'User ID is required and must be a valid UUID.' });
     }

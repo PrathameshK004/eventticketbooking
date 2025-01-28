@@ -326,7 +326,6 @@ async function updateBooking(req, res) {
                 }
             } catch (err) {
                 console.error("JWT Verification Error:", err.message);
-                console.log(err.message);
                 await session.abortTransaction();
                 return res.status(401).json({ error: 'Invalid token.' });
                 
