@@ -6,6 +6,7 @@ const ObjectId = require('mongoose').Types.ObjectId;
 const { GridFSBucket } = require('mongodb');
 const mongoose = require('mongoose');
 const path = require('path');
+const Token = require('../modules/token.module');
 const { MongoClient } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const client = new MongoClient(process.env.CONNECTIONSTRING);
@@ -157,6 +158,20 @@ async function createEvent(req, res) {
         res.status(201).json(newEvent);
     } catch (error) {
         console.error('Error creating event:', error);
+        try {
+              const token = req.params?.token;
+        
+              if (token) {
+                const tokenDoc = await Token.findOne({ token });
+        
+                if (tokenDoc) {
+                  tokenDoc.used = false;
+                  await tokenDoc.save();
+                }
+              }
+            } catch (tokenErr) {
+              console.error("Error handling token:", tokenErr.message);
+            }
         res.status(500).json({ error: 'Failed to create event', details: error.message });
     }
 }

@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { MongoClient } = require('mongodb');
 const client = new MongoClient(process.env.CONNECTIONSTRING);
+const sendNotification = require("./notification.controller");
 
 // MongoDB Connection and GridFS setup
 let bucket;
@@ -160,8 +161,8 @@ async function respondToEnquiry(req, res) {
             return res.status(400).json({ error: 'Only pending enquiries can be updated' });
         }
 
-        if(status === "Accepted" && enquiry.type === "Organizer Request"){
-            const user = await User.findById( enquiry.userId );
+        if (status === "Accepted" && enquiry.type === "Organizer Request") {
+            const user = await User.findById(enquiry.userId);
             if (!user) {
                 return res.status(404).json({ message: 'User not found' });
             }
@@ -169,9 +170,12 @@ async function respondToEnquiry(req, res) {
             if (user.roles.includes(1)) {
                 return res.status(400).json({ message: 'The User is already an Organizer' })
             }
-    
+
             user.roles.addToSet(1);
             await user.save();
+            await sendNotification("enquiry", "Request Approved", "Your Request to become Organizer has been Accepted.", enquiry.userId)
+                .then(() => console.log("Notification created successfully"))
+                .catch(err => console.error("Failed to create notification:", err));
         }
 
         if (status === "Accepted" && enquiry.type === "Event Request") {
@@ -196,14 +200,14 @@ async function respondToEnquiry(req, res) {
             const transporter = nodemailer.createTransport({
                 service: 'gmail', // You can use other services like SendGrid, etc.
                 auth: {
-                    user: process.env.EMAIL, 
-                    pass: process.env.EMAIL_PASSWORD, 
+                    user: process.env.EMAIL,
+                    pass: process.env.EMAIL_PASSWORD,
                 },
             });
 
             const mailOptions = {
                 from: process.env.EMAIL,
-                to: user.emailID, 
+                to: user.emailID,
                 subject: `Add Event Request Link`,
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border-radius: 8px; background-color: #f9f9f9; border: 1px solid #ddd;">
@@ -241,18 +245,50 @@ async function respondToEnquiry(req, res) {
                     </div>
                 `
             };
-            
+
 
             // Send the email
             await transporter.sendMail(mailOptions);
 
-            
+            await sendNotification("enquiry", "Request Approved", "Your Request to Add Event has been Accepted, Please check your mail", enquiry.userId)
+                .then(() => console.log("Notification created successfully"))
+                .catch(err => console.error("Failed to create notification:", err));
+
         }
+        
+
+        if (status === "Accepted" && enquiry.type === "Event Request") {
+
+            const user = await User.findById(enquiry.userId);
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            await sendNotification(
+                "enquiry", "Request Approved", `Your request for enquiry "${enquiry.message}" has been accepted. Please check your mail.`, enquiry.userId)
+                .then(() => console.log("Notification created successfully"))
+                .catch(err => console.error("Failed to create notification:", err));
+
+        }
+
+        if (status === "Rejected") {
+
+            const user = await User.findById(enquiry.userId);
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            await sendNotification(
+                "enquiry", "Request Rejected", `Your request for enquiry "${enquiry.type}" has been declined.`, enquiry.userId)
+                .then(() => console.log("Notification created successfully"))
+                .catch(err => console.error("Failed to create notification:", err));
+
+        }
+
         // Update the enquiry status
         enquiry.status = status;
         enquiry.remarks = remarks;
         await enquiry.save();
-
         res.status(200).json({ message: 'Response updated' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to update enquiry' });

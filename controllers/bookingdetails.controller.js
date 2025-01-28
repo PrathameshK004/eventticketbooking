@@ -84,8 +84,12 @@ async function createBooking(req, res) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Send confirmation email asynchronously
         await sendBookingConfirmationEmail(user.emailID, newBooking[0], event);
+
+        await sendNotification(
+                        "bookings", "Booking Confirmed", `Your booking for  "${event.eventTitle}" has been confirmed.`, userId)
+                        .then(() => console.log("Notification created successfully"))
+                        .catch(err => console.error("Failed to create notification:", err));
 
         res.status(201).json(newBooking[0]);
     } catch (error) {
@@ -163,9 +167,13 @@ async function createBookingWithWallet(req, res) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Send confirmation email asynchronously
         await sendBookingConfirmationEmail(user.emailID, newBooking[0], event);
 
+        await sendNotification(
+            "bookings", "Booking Confirmed", `Your booking for  "${event.eventTitle}" has been confirmed.`, userId)
+            .then(() => console.log("Notification created successfully"))
+            .catch(err => console.error("Failed to create notification:", err));
+            
         res.status(201).json(newBooking[0]);
     } catch (error) {
         // Rollback transaction on failure

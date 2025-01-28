@@ -110,6 +110,20 @@ async function validateNewEvent(req, res, next) {
       return res.status(409).json({ error: 'A similar event already exists. Duplicate events are not allowed.' });
     }
   } catch (error) {
+    try {
+      const token = req.params?.token;
+
+      if (token) {
+        const tokenDoc = await Token.findOne({ token });
+
+        if (tokenDoc) {
+          tokenDoc.used = false;
+          await tokenDoc.save();
+        }
+      }
+    } catch (tokenErr) {
+      console.error("Error handling token:", tokenErr.message);
+    }
     return res.status(500).json({ error: 'Error checking for existing events.' });
   }
 
