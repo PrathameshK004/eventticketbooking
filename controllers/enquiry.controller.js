@@ -272,7 +272,7 @@ async function respondToEnquiry(req, res) {
             }
 
             try {
-                await notificationController.sendNotification("enquiry", "Request Approved", `Your request for enquiry "${enquiry.message}" has been accepted. Please check your mail.`, enquiry.userId)
+                await notificationController.sendNotification("enquiry", "Request Approved", `Your request for enquiry "${enquiry.message}" has been accepted.`, enquiry.userId)
             }
             catch (err) {
                 console.error("Failed to create notification:", err);
