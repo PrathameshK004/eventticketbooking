@@ -618,6 +618,15 @@ async function getHoldBalance(req, res) {
             return res.status(400).json({ error: 'User ID is required and must be a valid UUID.' });
         }
 
+        const user = await User.findById( userId );
+        if (!user || user.isTemp)  {
+            return res.status(400).json({ error: 'User not Found.' });
+        }
+
+        if(!user.roles.includes(1)){
+            return res.status(403).json({ error: 'You are not an Organizer.' });
+        }
+
         const events = await Event.find({ userId });
 
         if (!events.length) {
