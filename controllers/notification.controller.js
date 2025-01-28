@@ -8,9 +8,7 @@ module.exports = {
 
 async function sendNotification(type, title, message, userId){
     try {
-        const notification = new Notification({ type, title, message, userId });
-        await notification.save();
-        console.log("Notification saved successfully:", notification);
+        const notification = await Notification.create({ type, title, message, userId });
         return notification;
     } catch (error) {
         console.error("Error creating notification:", error.message);
