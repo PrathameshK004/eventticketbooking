@@ -246,11 +246,12 @@ async function respondToEnquiry(req, res) {
             // Send the email
             await transporter.sendMail(mailOptions);
 
-            // Update the enquiry status
-            enquiry.status = status;
-            enquiry.remarks = remarks;
-            await enquiry.save();
+            
         }
+        // Update the enquiry status
+        enquiry.status = status;
+        enquiry.remarks = remarks;
+        await enquiry.save();
 
         res.status(200).json({ message: 'Response updated' });
     } catch (error) {
