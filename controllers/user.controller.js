@@ -4,6 +4,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const User = require('../modules/user.module.js');
 const Event = require('../modules/event.module.js');
+const Enquiry = require('../modules/enquiry.module.js');
 const jwt = require('jsonwebtoken');
 const ObjectId = require('mongoose').Types.ObjectId;
 const nodemailer = require('nodemailer');
@@ -29,7 +30,8 @@ module.exports = {
     makeAdmin,
     removeAdmin,
     getRoles,
-    getHoldBalance
+    getHoldBalance,
+    checkPendingOrgReq
 };
 
 function isUuidValid(userId) {
@@ -638,6 +640,26 @@ async function getHoldBalance(req, res) {
         res.status(200).json({ holdBalance: totalHoldBalance });
     } catch (error) {
         res.status(500).json({ error: 'An error occurred while fetching the hold balance: ' + error.message });
+    }
+}
+async function checkPendingOrgReq(req, res) {
+    const userId = req.params.userId;
+    try {
+        const enquiries = await Enquiry.find({ 
+            userId: userId,
+            type: "Organizer Request",
+            status: "Pending"
+        });
+
+        if (enquiries.length > 0) {
+            return res.status(200).json({ success: true });  
+        }
+
+        return res.status(404).json({ success: false, message: "No pending Organizer Requests found." });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ success: false, message: "Server error occurred." });
     }
 }
 

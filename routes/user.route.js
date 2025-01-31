@@ -29,6 +29,7 @@ router.post("/sendOtp", userInterceptor.validateOtpReq, usersController.sendOTP)
 router.post('/login/admin', userInterceptor.checkAdminLogin, usersController.validateAdminLogin);
 router.post('/makeAdmin/:userId',verifyToken, userInterceptor.validateAdmin, usersController.makeAdmin);
 router.post('/removeAdmin/:userId',verifyToken, userInterceptor.validateAdmin, usersController.removeAdmin);
+router.get('/checkPendingOrgRequest/:userId', verifyToken, userInterceptor.validateUserId, usersController.checkPendingOrgReq);
 
 module.exports = router;
 
