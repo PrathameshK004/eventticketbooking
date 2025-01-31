@@ -303,7 +303,7 @@ async function respondToEnquiry(req, res) {
         
         const enqDel = await enquiry.save();
         if (enqDel.fileId) {
-            await bucket.delete(new ObjectId(enqDel.fileId));
+            await bucket.delete(enqDel.fileId);
         }
 
         enquiry.imageUrl = null;
