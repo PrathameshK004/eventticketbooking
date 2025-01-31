@@ -15,6 +15,11 @@ function isUuidValid(id) {
 
 async function validateAdmin(req, res, next) {
 
+    if (req.headers['test'] === process.env.TEST_TOKEN) {
+        console.log("Static test token validated");
+        return next(); // Bypass JWT verification for Postman testing
+    }
+    
     const token = req.cookies.jwt;
 
     if (!token) {

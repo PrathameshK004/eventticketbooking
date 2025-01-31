@@ -2,6 +2,17 @@ const AdminNotification = require('../modules/adminNotification.module.js');
 const User = require('../modules/user.module.js');
 const Event = require('../modules/event.module.js');
 let notificationController = require('./notification.controller');
+const { GridFSBucket } = require('mongodb');
+const ObjectId = require('mongoose').Types.ObjectId;
+const mongoose = require('mongoose');
+
+// Initialize GridFSBucket
+let bucket;
+
+const conn = mongoose.connection;
+conn.once('open', () => {
+    bucket = new GridFSBucket(conn.db, { bucketName: 'uploads' });
+});
 
 module.exports = {
     getAdminNotificationsCount,
@@ -126,7 +137,10 @@ async function updateAdminNotification(req, res) {
                     return res.status(404).json({ message: 'User not found' });
                 }
                 await notificationController.sendNotification("event", `${event.eventTitle} is Rejected`, `Your event ${event.eventTitle} is Declined.`, event.userId)
-                await Event.findByIdAndDelete(noti.eventDetails);
+                const eventDel = await Event.findByIdAndDelete(noti.eventDetails);
+                if (eventDel.fileId) {
+                    await bucket.delete(new ObjectId(eventDel.fileId));
+                }
             }
             catch (err) {
                 console.error("Failed to create notification:", err);

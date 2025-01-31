@@ -160,7 +160,7 @@ async function createTempEvent(req, res) {
         const adminNotificationDetails = {
             type: "New Event Created",
             title: "New Temporary Event",
-            message: `A new temporary event "${newEvent.eventTitle}" has been created by ${userDetail.username}.`,
+            message: `A new temporary event "${newEvent.eventTitle}" has been created by ${userDetail.userName}.`,
             eventDetails: newEvent._id, 
         };
 
