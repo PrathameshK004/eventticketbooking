@@ -301,7 +301,7 @@ async function respondToEnquiry(req, res) {
         enquiry.status = status;
         enquiry.remarks = remarks;
         
-        const enqDel = await enquiry.save();
+        const enqDel = await Enquiry.findById(enquiry._id);
         if (enqDel.fileId) {
             await bucket.delete(enqDel.fileId);
         }
