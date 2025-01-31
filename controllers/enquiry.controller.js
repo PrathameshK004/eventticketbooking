@@ -300,7 +300,16 @@ async function respondToEnquiry(req, res) {
         // Update the enquiry status
         enquiry.status = status;
         enquiry.remarks = remarks;
+        
+        const enqDel = await enquiry.save();
+        if (enqDel.fileId) {
+            await bucket.delete(new ObjectId(enqDel.fileId));
+        }
+
+        enquiry.imageUrl = null;
+        enquiry.fileId = null;
         await enquiry.save();
+
         res.status(200).json({ message: 'Response updated' });
     } catch (error) {
         res.status(500).json({ error: 'Failed to update enquiry' });
