@@ -29,7 +29,8 @@ const eventSchema = new mongoose.Schema({
     eventOrgFacebook: { type: String, trim: true },
     userId: { type: String, required: true },
     fileId: {type: String },
-    totalAmount: {type: Number}
+    totalAmount: {type: Number},
+    isTemp: { type: Boolean, default: true}
 }, { versionKey: false });
 
 eventSchema.methods.toJSON = function() {

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const Event = require('../modules/event.module');
-const User = require('../modules/user.module');  // Import the User model
+const User = require('../modules/user.module'); 
 
 const bookingDetailsSchema = new mongoose.Schema({
     userId: { type: String },//*

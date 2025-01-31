@@ -6,5 +6,8 @@ const router = express.Router();
 
 router.get("/getNotificationofUser/:userId", verifyToken, notificationInterceptor.validateUserId, notificationController.getNotifications);
 router.get("/getNotificationCount/:userId", verifyToken, notificationInterceptor.validateUserId, notificationController.getNotificationsCount);
+router.delete("/deleteNotification/:notificationId", verifyToken, notificationInterceptor.validateNotificationId, notificationController.deleteNotification);
 
 module.exports = router;
+
+

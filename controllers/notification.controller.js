@@ -3,7 +3,8 @@ const Notification = require('../modules/notification.module.js');
 module.exports = {
     getNotifications,
     getNotificationsCount,
-    sendNotification
+    sendNotification,
+    deleteNotification
 };
 
 async function sendNotification(type, title, message, userId){
@@ -58,3 +59,25 @@ async function getNotificationsCount(req, res) {
     }
 };
 
+
+async function deleteNotification(req, res) {
+    try {
+        const notificationId = req.params.notificationId;
+
+        if (!notificationId) {
+            return res.status(400).json({ message: "Notification ID is required" });
+        }
+
+        const deletedNotification = await Notification.findByIdAndDelete(notificationId);
+
+        if (!deletedNotification) {
+            return res.status(404).json({ message: "Notification not found" });
+        }
+
+        res.status(200).json({ message: "Notification deleted successfully" });
+
+    } catch (error) {
+        console.error("Error deleting notification:", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Event = require('../modules/event.module.js');
 const User = require('../modules/user.module.js');
+const AdminNotification = require('../modules/adminNotification.module.js');
 const ObjectId = require('mongoose').Types.ObjectId;
 const { GridFSBucket } = require('mongodb');
 const mongoose = require('mongoose');
@@ -25,12 +26,13 @@ module.exports = {
     getEventById,
     createEvent,
     updateEvent,
-    deleteEvent
+    deleteEvent,
+    createTempEvent
 };
 
 // Get all events
 function getAllEvents(req, res) {
-    Event.find()
+    Event.find({ isTemp: false })
         .then(events => res.status(200).json(events))
         .catch(err => {
             console.error(err.message);
@@ -56,7 +58,7 @@ async function getEventById(req, res) {
     }
 }
 
-async function createEvent(req, res) {
+async function createTempEvent(req, res) {
     try {
         let fileId = null;
         let imageUrl = null;
@@ -74,7 +76,7 @@ async function createEvent(req, res) {
         const userId = decoded.key;
 
         const userDetail = await User.findById( userId );
-        if(!userDetail){
+        if(!userDetail || userDetail.isTemp){
             return res.status(404).json({ message: "User not found" });
         }
 
@@ -140,6 +142,141 @@ async function createEvent(req, res) {
                 // Update event with fileId and imageUrl
                 newEvent.fileId = fileId;
                 newEvent.imageUrl = imageUrl;
+                newEvent.isTemp = true;
+                const savedEvent = await newEvent.save();
+
+                await User.findByIdAndUpdate(
+                    userId,
+                    { $push: { eventId: savedEvent._id } }, // Push the eventId into the user's eventId array
+                    { new: true } // Return the updated user document
+                );
+
+            } catch (uploadError) {
+                console.error('Error uploading file:', uploadError);
+                return res.status(500).json({ error: 'File upload failed.' });
+            }
+        }
+
+        const adminNotificationDetails = {
+            type: "New Event Created",
+            title: "New Temporary Event",
+            message: `A new temporary event "${newEvent.eventTitle}" has been created by ${userDetail.username}.`,
+            eventDetails: newEvent._id, 
+        };
+
+        const newNotification = await AdminNotification.create(adminNotificationDetails);
+        if (!newNotification || !newNotification._id) {
+            console.error("Failed to create admin notification");
+        }
+
+        // Respond with the created event details
+        res.status(201).json(newEvent);
+    } catch (error) {
+        console.error('Error creating event:', error);
+        try {
+              const token = req.params?.token;
+        
+              if (token) {
+                const tokenDoc = await Token.findOne({ token });
+        
+                if (tokenDoc) {
+                  tokenDoc.used = false;
+                  await tokenDoc.save();
+                }
+              }
+            } catch (tokenErr) {
+              console.error("Error handling token:", tokenErr.message);
+            }
+        res.status(500).json({ error: 'Failed to create event', details: error.message });
+    }
+}
+
+
+async function createEvent(req, res) {
+    try {
+        let fileId = null;
+        let imageUrl = null;
+
+        let token = req.params.token;
+        if (!token) {
+            token = req.cookies.jwt; 
+        }
+
+        if (!token) {
+            return res.status(401).json({ message: 'No token provided' });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWTSecret);
+        const userId = decoded.key;
+
+        const userDetail = await User.findById( userId );
+        if(!userDetail || !userDetail.isTemp){
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (!userDetail.roles.includes(2)) {
+            return res.status(403).json({ message: 'You are not authorized to add an event. You are not an Admin.' });
+        }
+        
+
+        let eventFeatures = req.body.eventFeatures || [];
+        let eventTags = req.body.eventTags || [];
+
+        const eventDetails = {
+            eventTitle: req.body.eventTitle,
+            eventDate: new Date(req.body.eventDate),
+            eventAddress: req.body.eventAddress,
+            eventOrganizer: req.body.eventOrganizer,
+            eventPrice: parseFloat(req.body.eventPrice),
+            eventDescription: req.body.eventDescription,
+            eventLanguage: req.body.eventLanguage,
+            eventRating: req.body.eventRating ? parseFloat(req.body.eventRating) : undefined,
+            eventCapacity: parseInt(req.body.eventCapacity),
+            eventDuration: req.body.eventDuration,
+            eventFeatures: eventFeatures,
+            eventTags: eventTags,
+            eventOrgInsta: req.body.eventOrgInsta,
+            eventOrgX: req.body.eventOrgX,
+            eventOrgFacebook: req.body.eventOrgFacebook,
+            userId: userId
+        };
+
+        const newEvent = await Event.create(eventDetails);
+        if (!newEvent || !newEvent._id) {
+            return res.status(500).json({ error: 'Failed to create event' });
+        }
+
+        // Handle file upload if a file is present
+        if (req.file) {
+            const fileExtension = path.extname(req.file.originalname);
+            const newFileName = `${newEvent._id}${fileExtension}`;
+
+            // Upload file to GridFS and get the fileId
+            try {
+                const fileUploadResult = await new Promise((resolve, reject) => {
+                    const uploadStream = bucket.openUploadStream(newFileName, {
+                        contentType: req.file.mimetype,
+                    });
+                    uploadStream.end(req.file.buffer);
+
+                    uploadStream.on('finish', async (file) => {
+                        console.log('File uploaded successfully');
+                        resolve(file._id);
+                    });
+
+                    uploadStream.on('error', (err) => {
+                        console.error('Upload failed:', err);
+                        reject(err);
+                    });
+                });
+
+                fileId = fileUploadResult;
+                imageUrl = `https://eventticketbooking-cy6o.onrender.com/file/retrieve/${newFileName}`;
+
+                // Update event with fileId and imageUrl
+                newEvent.fileId = fileId;
+                newEvent.imageUrl = imageUrl;
+                newEvent.isTemp = false;
                 const savedEvent = await newEvent.save();
 
                 await User.findByIdAndUpdate(
@@ -175,7 +312,6 @@ async function createEvent(req, res) {
         res.status(500).json({ error: 'Failed to create event', details: error.message });
     }
 }
-
 
 async function updateEvent(req, res) {
     const eventId = req.params.eventId;

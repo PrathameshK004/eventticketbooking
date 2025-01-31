@@ -1,0 +1,145 @@
+const AdminNotification = require('../modules/adminNotification.module.js');
+const User = require('../modules/user.module.js');
+const Event = require('../modules/event.module.js');
+let notificationController = require('./notification.controller');
+
+module.exports = {
+    getAdminNotificationsCount,
+    getAllAdminNotifications,
+    deleteAdminNotification,
+    updateAdminNotification
+};
+
+async function getAllAdminNotifications(req, res) {
+    try {
+
+        const notifications = await AdminNotification.find({ status: "Pending"});
+
+        if (!notifications || notifications.length === 0) {
+            return res.status(404).json({ message: "No notifications found." });
+        }
+
+        res.status(200).json(notifications);
+    } catch (error) {
+        console.error("Error fetching notifications:", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+}
+
+
+async function getAdminNotificationsCount(req, res) {
+    try {
+
+        const notificationCount = await AdminNotification.countDocuments({ status: "Pending" });
+
+        res.status(200).json({ totalNotifications: notificationCount });
+    } catch (error) {
+        console.error("Error fetching notifications count:", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+}
+
+async function deleteAdminNotification(req, res) {
+    try {
+        const notificationId = req.params.notificationId;
+
+        if (!notificationId) {
+            return res.status(400).json({ message: "Notification ID is required" });
+        }
+
+        const deletedNotification = await AdminNotification.findByIdAndDelete(notificationId);
+
+        if (!deletedNotification) {
+            return res.status(404).json({ message: "Notification not found" });
+        }
+
+        res.status(200).json({ message: "Notification deleted successfully" });
+
+    } catch (error) {
+        console.error("Error deleting notification:", error.message);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+
+async function getAllEnquiries(req, res) {
+    try {
+        const enquiries = await Enquiry.find();
+        res.status(200).json(enquiries);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch enquiries' });
+    }
+};
+
+async function updateAdminNotification(req, res) {
+    try {
+        const { status, remarks } = req.body;
+        const noti = await AdminNotification.findById(req.params.notificationId);
+        if (!noti) {
+            return res.status(404).json({ error: 'Notification not found' });
+        }
+
+        if (noti.status !== 'Pending') {
+            return res.status(400).json({ error: 'Only pending notification can be updated' });
+        }
+
+        if (status === "Accepted") {
+            try {
+                const event = await Event.findById(noti.eventDetails);
+                if (!event) {
+                    return res.status(404).json({ message: 'Event not found' });
+                }
+
+                if (!event.isTemp) {
+                    return res.status(404).json({ message: 'Event is already Permanent' });
+                }
+
+                const user = await User.findById(event.userId);
+                
+                if (!user) {
+                    return res.status(404).json({ message: 'User not found' });
+                }
+                await notificationController.sendNotification("event", `${event.eventTitle} is Accepted`, `Your event ${event.eventTitle} is live.`, event.userId)
+                event.isTemp=false;
+                await event.save();
+            }
+            catch (err) {
+                console.error("Failed to create notification:", err);
+            }
+
+        }
+
+        if (status === "Rejected") {
+            try{
+                const event = await Event.findById(noti.eventDetails);
+                if (!event) {
+                    return res.status(404).json({ message: 'Event not found' });
+                }
+
+                if (!event.isTemp) {
+                    return res.status(404).json({ message: 'Event is already Permanent' });
+                }
+
+                const user = await User.findById(event.userId);
+                
+                if (!user) {
+                    return res.status(404).json({ message: 'User not found' });
+                }
+                await notificationController.sendNotification("event", `${event.eventTitle} is Rejected`, `Your event ${event.eventTitle} is Declined.`, event.userId)
+                await Event.findByIdAndDelete(noti.eventDetails);
+            }
+            catch (err) {
+                console.error("Failed to create notification:", err);
+            }
+
+
+        }
+
+        noti.status = status;
+        noti.remarks = remarks;
+        await noti.save();
+        res.status(200).json({ message: 'Response updated' });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update notification' });
+    }
+};
