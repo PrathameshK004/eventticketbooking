@@ -34,7 +34,7 @@ async function validateAdmin(req, res, next) {
     }
 
     const userDetail = await User.findById( userId );
-    if(!userDetail || !userDetail.isTemp){
+    if(!userDetail || userDetail.isTemp){
         return res.status(404).json({ message: "User not found" });
     }
 
