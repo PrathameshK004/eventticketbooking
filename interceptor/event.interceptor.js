@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const app = express();
 const Event = require('../modules/event.module');
+const User = require('../modules/user.module');
 const Token = require('../modules/token.module');
 
 function isDateInPast(date) {
@@ -17,11 +18,32 @@ module.exports = {
   validateEventId,
   validateNewEvent,
   validateUpdateEvent,
-  validateTokenReuse
+  validateTokenReuse,
+  validateOrgId
 };
 
 function isUuidValid(eventId) {
   return mongoose.Types.ObjectId.isValid(eventId);
+}
+
+async function validateOrgId(req, res, next) {
+  const userId = req.params.userId;
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required.' });
+  }
+  if (!isUuidValid(userId)) {
+    return res.status(400).json({ error: 'Invalid userId. Please provide a valid UUID.' });
+  }
+  const user = await User.findById(userId);
+  if(!user){
+    return res.status(400).json({ error: 'User not found.' });
+  }
+
+  if(!user.roles.includes(1)){
+    return res.status(400).json({ error: 'You are not Organizer' });
+  }
+
+  next();
 }
 
 function validateEventId(req, res, next) {

@@ -27,7 +27,8 @@ module.exports = {
     createEvent,
     updateEvent,
     deleteEvent,
-    createTempEvent
+    createTempEvent,
+    getEventsOfOrg
 };
 
 // Get all events
@@ -39,6 +40,21 @@ function getAllEvents(req, res) {
             res.status(500).json({ error: 'Failed to fetch events' });
         });
 }
+
+function getEventsOfOrg(req, res) {
+    Event.find({ isTemp: false, userId: req.params.userId })
+        .then(events => {
+            if (!events || events.length === 0) {
+                return res.status(404).json({ error: 'No events found for this organizer.' });
+            }
+            res.status(200).json(events);
+        })
+        .catch(err => {
+            console.error('Error fetching events:', err.message);
+            res.status(500).json({ error: 'Failed to fetch events' });
+        });
+}
+
 
 // Get event by ID
 async function getEventById(req, res) {

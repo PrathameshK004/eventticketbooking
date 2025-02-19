@@ -6,6 +6,7 @@ const walletRoutes = require("./wallet.route");
 const notificationRoutes = require("./notification.route");
 const adminNotificationRoutes = require("./adminNotification.route");
 const enquiryRoutes = require("./enquiry.route");
+const reportRoutes = require("./orgReport.route");
 const router = express.Router();
 
 
@@ -16,5 +17,6 @@ router.use('/events',eventRoutes);
 router.use('/bookingdetails',bookingDetailsRoutes);
 router.use('/wallet',walletRoutes);
 router.use('/enquiry',enquiryRoutes);
+router.use('/reports',reportRoutes);
 
 module.exports=router;

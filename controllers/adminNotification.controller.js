@@ -72,16 +72,6 @@ async function deleteAdminNotification(req, res) {
     }
 };
 
-
-async function getAllEnquiries(req, res) {
-    try {
-        const enquiries = await Enquiry.find();
-        res.status(200).json(enquiries);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch enquiries' });
-    }
-};
-
 async function updateAdminNotification(req, res) {
     try {
         const { status, remarks } = req.body;

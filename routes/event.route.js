@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const router = express.Router();
 const eventController = require('../controllers/event.controller');
+const reportController = require('../controllers/orgReport.controller');
 const eventInterceptor = require('../interceptor/event.interceptor');
 const path = require('path');
 let verifyToken = require('../interceptor/auth.interceptor');
@@ -29,6 +30,7 @@ const upload = multer({
 // Define routes
 
 router.get('/allEvents', eventController.getAllEvents);
+router.get('/getEventsOfOrg/:userId', verifyToken, eventInterceptor.validateOrgId, eventController.getEventsOfOrg);
 router.get('/:eventId', eventInterceptor.validateEventId, eventController.getEventById);
 router.post('/addEvent', verifyToken, upload.single('file'), eventInterceptor.validateNewEvent, eventController.createEvent);
 router.post('/addEvent/:token', eventInterceptor.validateTokenReuse, verifyToken, upload.single('file'), eventInterceptor.validateNewEvent, eventController.createTempEvent);
