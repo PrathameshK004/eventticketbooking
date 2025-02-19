@@ -11,6 +11,7 @@ const eventSchema = new mongoose.Schema({
     eventLanguage: { type: String, required: true, trim: true },
     eventRating: { type: Number, min: 0, max: 5 },
     eventCapacity: { type: Number, required: true },
+    totalEventCapacity: { type: Number },
     eventDuration: { 
         type: String, 
         required: true, 
@@ -32,6 +33,15 @@ const eventSchema = new mongoose.Schema({
     totalAmount: {type: Number},
     isTemp: { type: Boolean, default: true}
 }, { versionKey: false });
+
+
+eventSchema.pre('save', function(next) {
+    if (this.isNew && !this.totalEventCapacity) {
+        this.totalEventCapacity = this.eventCapacity;
+    }
+    next();
+});
+
 
 eventSchema.methods.toJSON = function() {
     const event = this.toObject();

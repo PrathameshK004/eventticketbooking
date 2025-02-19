@@ -15,10 +15,11 @@ async function generateReport(eventId) {
 
     const bookings = await BookingDetails.find({ eventId });
 
-    const totalCapacity = event.eventCapacity;
     const totalBookings = bookings.length;
     const cancelledBookings = bookings.filter((b) => b.book_status === "Cancelled").length;
     const successfulBookings = totalBookings - cancelledBookings;
+    const totalCapacity = event.totalEventCapacity;
+    const availableCapacity = event.eventCapacity;
     const profit = bookings.reduce(
         (acc, b) => acc + (b.book_status === "Booked" ? b.totalAmount : 0),
         0
@@ -80,6 +81,7 @@ async function generateReport(eventId) {
 
     const detailsTable = {
         headers: [
+            "Available Capacity",
             "Total Capacity",
             "Total Bookings",
             "Successful Bookings",
@@ -88,12 +90,12 @@ async function generateReport(eventId) {
             "Total Profit"
         ],
         rows: [
-            [totalCapacity, totalBookings, successfulBookings, cancelledBookings, `${cancellationRate}%`, `Rs. ${profit}`]
+            [availableCapacity, totalCapacity, totalBookings, successfulBookings, cancelledBookings, `${cancellationRate}%`, `Rs. ${profit.toFixed(4)}`]
         ],
     };
 
     await doc.table(detailsTable, {
-        columnsSize: [90, 90, 90, 90, 90, 90],
+        columnsSize: [78, 78, 78, 78, 78, 78, 78],
         cellPadding: 5,
         x: 40,
         prepareHeader: () => doc.font("Helvetica-Bold").fontSize(12),
@@ -122,43 +124,79 @@ async function generateReport(eventId) {
     const barChartBuffer = await chartJSNodeCanvas.renderToBuffer({
         type: "bar",
         data: {
-            labels: ["Successful Bookings", "Profit", "Cancellations"],
+            labels: ["", "", ""], // Keeps bars centered
             datasets: [
                 {
                     label: "Successful Bookings",
-                    data: [successfulBookings, 0, 0],
+                    data: [successfulBookings, null, null], 
                     backgroundColor: "#48bb78",
                     borderColor: "#2f855a",
                     borderWidth: 2,
-                },
-                {
-                    label: "Profit",
-                    data: [0, profit, 0],
-                    backgroundColor: "#4299e1",
-                    borderColor: "#2b6cb0",
-                    borderWidth: 2,
+                    yAxisID: "y",
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.6,
                 },
                 {
                     label: "Cancellations",
-                    data: [0, 0, cancelledBookings],
+                    data: [null, cancelledBookings, null], 
                     backgroundColor: "#f56565",
                     borderColor: "#c53030",
                     borderWidth: 2,
+                    yAxisID: "y",
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.6,
+                },
+                {
+                    label: "Profit",
+                    data: [null, null, profit], 
+                    backgroundColor: "#4299e1",
+                    borderColor: "#2b6cb0",
+                    borderWidth: 2,
+                    yAxisID: "y1",
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.6,
                 }
             ],
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            indexAxis: "x",
             plugins: {
-                legend: { display: true, position: "top" },
+                legend: {
+                    display: true,
+                    position: "top",
+                    align: "center",
+                    labels: {
+                        usePointStyle: true,
+                        boxWidth: 16, // Keeps labels in one clean line
+                        padding: 20, // Adds spacing between the legend & chart
+                        font: { size: 14 },
+                    },
+                },
             },
             scales: {
-                y: { beginAtZero: true, title: { display: true, text: "Count / Amount" } },
-                x: { title: { display: true, text: "Categories" } },
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: "Bookings / Cancellations" },
+                    ticks: { stepSize: 1 },
+                },
+                y1: {
+                    beginAtZero: true,
+                    position: "right",
+                    title: { display: true, text: "Profit (Rs.)" },
+                    grid: { drawOnChartArea: false },
+                },
+                x: {
+                    title: { display: false },
+                    ticks: { display: false },
+                },
             },
         },
     });
+    
+    
+    
 
     doc.image(barChartBuffer, doc.page.width / 2 - 200, doc.y, { width: 400, height: 200 });
     doc.moveDown(5);
@@ -169,11 +207,29 @@ async function generateReport(eventId) {
     doc.moveDown();
 
     const bookingsTable = {
-        headers: ["Sr. No.", "Customer Name", "Amount (Rs.)", "Status"],
-        rows: bookings.map((b, i) => [i + 1, b.customer_name, b.totalAmount, b.book_status]),
+        headers: ["Sr. No.", "Customer Name", "Type", "Amount (Rs.)", "Status"],
+        rows: bookings.map((b, i) => {
+            const types = [
+                { label: "Standard", count: b.noOfPeoples[0] },
+                { label: "Premium", count: b.noOfPeoples[1] },
+                { label: "Child", count: b.noOfPeoples[2] }
+            ].filter(t => t.count > 0); // Remove types with count 0
+    
+            return [
+                i + 1,  // Sr. No.
+                b.customer_name, // Customer Name
+                types.map(t => `${t.label} (${t.count})`).join("\n"), // Combine types in one cell (newline separated)
+                b.totalAmount, // Amount
+                b.book_status // Status
+            ];
+        }),
     };
+    
+    
+    
+    
     await doc.table(bookingsTable, {
-        columnsSize: [50, 200, 100, 100],
+        columnsSize: [50, 200, 75, 50, 75],
         cellPadding: 5,
         x: 100,
         prepareHeader: () => doc.font("Helvetica-Bold").fontSize(12),
