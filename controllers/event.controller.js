@@ -42,7 +42,7 @@ function getAllEvents(req, res) {
 }
 
 function getEventsOfOrg(req, res) {
-    Event.find({ isTemp: false, userId: req.params.userId })
+    Event.find({ userId: req.params.userId })
         .then(events => {
             if (!events || events.length === 0) {
                 return res.status(404).json({ error: 'No events found for this organizer.' });
