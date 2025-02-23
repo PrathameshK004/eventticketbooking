@@ -384,7 +384,7 @@ async function updateBooking(req, res) {
 
                 // Check if the update date matches eventDate
                 const today = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
-                const eventDate = event.eventDate;
+                const eventDate = event.eventDate.toISOString().split('T')[0];
 
                 if (today !== eventDate) {
                     await session.abortTransaction();
