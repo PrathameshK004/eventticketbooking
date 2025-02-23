@@ -83,9 +83,30 @@ async function createBooking(req, res) {
             return res.status(400).json({ message: "Not enough capacity for this booking." });
         }
 
+
         // Create booking inside the transaction
         const newBooking = new Booking({ ...req.body });
         await newBooking.save({ session });
+
+        // Credit 2.5% fee to Admin Wallet
+        const adminFee = newBooking.totalAmount * 0.025; // 2.5% for Admin
+        const adminWalletId = process.env.ADMIN_WALLET_ID;
+        let adminWallet = await Wallet.findById(adminWalletId).session(session);
+
+        if (!adminWallet) {
+            await session.abortTransaction();
+            return res.status(404).json({ error: 'Admin wallet not found' });
+        }
+
+
+        adminWallet.balance += adminFee;
+        adminWallet.transactions.push({
+            amount: adminFee,
+            type: 'Credit',
+            description: `Commission (Platform Fees) from booking transaction ID: ${newBooking.transactionId}`
+        });
+
+        await adminWallet.save({ session });
 
         // Commit transaction
         await session.commitTransaction();
@@ -185,6 +206,26 @@ async function createBookingWithWallet(req, res) {
             return res.status(400).json({ message: "Insufficient wallet balance for the booking" });
         }
 
+        // Credit 2.5% fee to Admin Wallet
+        const adminFee = newBooking.totalAmount * 0.025; // 2.5% for Admin
+        const adminWalletId = process.env.ADMIN_WALLET_ID;
+        let adminWallet = await Wallet.findById(adminWalletId).session(session);
+
+        if (!adminWallet) {
+            await session.abortTransaction();
+            return res.status(404).json({ error: 'Admin wallet not found' });
+        }
+
+
+        adminWallet.balance += adminFee;
+        adminWallet.transactions.push({
+            amount: adminFee,
+            type: 'Credit',
+            description: `Commission (Platform Fees) from booking transaction ID: ${newBooking.transactionId}`
+        });
+
+        await adminWallet.save({ session });
+        
         // Commit transaction
         await session.commitTransaction();
         session.endSession();
@@ -430,7 +471,6 @@ async function updateBooking(req, res) {
                 // Process the refund
                 const refundAmount = booking.totalAmount * 0.95; //95% Refund, 2.5 for Org and 2.5 for Admin
                 const deductionAmount = booking.totalAmount * 0.975;
-                const adminFee = booking.totalAmount * 0.025; // 2.5% for Admin
                 wallet.balance += refundAmount;
                 event.totalAmount -= deductionAmount;
 
@@ -443,26 +483,6 @@ async function updateBooking(req, res) {
 
                 
                 await wallet.save({ session });
-
-                // Credit 2.5% fee to Admin Wallet
-                const adminWalletId = process.env.ADMIN_WALLET_ID;
-                let adminWallet = await Wallet.findById(adminWalletId).session(session);
-
-                if (!adminWallet) {
-                    await session.abortTransaction();
-                    return res.status(404).json({ error: 'Admin wallet not found' });
-                }
-
-
-                adminWallet.balance += adminFee;
-                adminWallet.transactions.push({
-                    amount: adminFee,
-                    type: 'Credit',
-                    description: `Commission from cancelled transaction ID: ${booking.transactionId}`
-                });
-
-                await adminWallet.save({ session });
-                
                 await event.save({ session });
                 
                 // Update payment status
