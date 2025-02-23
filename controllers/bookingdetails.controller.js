@@ -70,10 +70,11 @@ async function createBooking(req, res) {
             return res.status(403).json({ error: 'Event is pending and not live for users.' });
         }
 
+        const totalAmountWithCommission = totalAmount - totalAmount * 0.025;
         // Atomically update event capacity and total amount
         const updatedEvent = await Event.findOneAndUpdate(
             { _id: eventId, eventCapacity: { $gte: totalPeople } }, // Ensure enough capacity
-            { $inc: { eventCapacity: -totalPeople, totalAmount: totalAmount } },
+            { $inc: { eventCapacity: -totalPeople, totalAmount: totalAmountWithCommission } },
             { new: true, session }
         );
 
@@ -173,10 +174,11 @@ async function createBookingWithWallet(req, res) {
             return res.status(400).json({ message: "Insufficient wallet balance for the booking" });
         }
 
+        const totalAmountWithCommission = totalAmount - totalAmount * 0.025;
         // Atomically update event capacity and total amount
         const updatedEvent = await Event.findOneAndUpdate(
             { _id: eventId, eventCapacity: { $gte: totalPeople } },
-            { $inc: { eventCapacity: -totalPeople, totalAmount: totalAmount } },
+            { $inc: { eventCapacity: -totalPeople, totalAmount: totalAmountWithCommission } },
             { new: true, session }
         );
 
@@ -469,10 +471,9 @@ async function updateBooking(req, res) {
                 }
 
                 // Process the refund
-                const refundAmount = booking.totalAmount * 0.95; //95% Refund, 2.5 for Org and 2.5 for Admin
-                const deductionAmount = booking.totalAmount * 0.975;
+                const refundAmount = booking.totalAmount * 0.975; //95% Refund, 2.5 for Org and 2.5 for Admin
                 wallet.balance += refundAmount;
-                event.totalAmount -= deductionAmount;
+                event.totalAmount -= refundAmount;
 
                 // Record transaction in wallet
                 wallet.transactions.push({
@@ -501,7 +502,6 @@ async function updateBooking(req, res) {
     } catch (err) {
         // Rollback transaction on failure
         await session.abortTransaction();
-        console.log(err.message);
         res.status(500).json({ error: 'Internal server error: ' + err.message });
     } finally {
         session.endSession();
