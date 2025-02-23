@@ -24,6 +24,8 @@ async function generateReport(eventId) {
         (acc, b) => acc + (b.book_status === "Booked" ? b.totalAmount : 0),
         0
     );
+    const cancellationProfit = event.totalAmount - profit;
+    const totalProfit = event.totalAmount;
     const cancellationRate = totalBookings > 0 ? ((cancelledBookings / totalBookings) * 100).toFixed(2) : 0;
 
     // Create PDF
@@ -87,15 +89,17 @@ async function generateReport(eventId) {
             "Successful Bookings",
             "Cancelled Bookings",
             "Cancellation Rate",
+            "Cancellation Profit",
+            "Booking Profit",
             "Total Profit"
         ],
         rows: [
-            [availableCapacity, totalCapacity, totalBookings, successfulBookings, cancelledBookings, `${cancellationRate}%`, `Rs. ${profit.toFixed(4)}`]
+            [availableCapacity, totalCapacity, totalBookings, successfulBookings, cancelledBookings, `${cancellationRate}%`, `Rs. ${cancellationProfit.toFixed(4)}`, `Rs. ${profit.toFixed(4)}`, `Rs. ${totalProfit.toFixed(4)}`]
         ],
     };
 
     await doc.table(detailsTable, {
-        columnsSize: [78, 78, 78, 78, 78, 78, 78],
+        columnsSize: [61, 61, 61, 61, 61, 61, 61, 61, 61],
         cellPadding: 5,
         x: 40,
         prepareHeader: () => doc.font("Helvetica-Bold").fontSize(12),
@@ -148,7 +152,7 @@ async function generateReport(eventId) {
                 },
                 {
                     label: "Profit",
-                    data: [null, null, profit], 
+                    data: [null, null, totalProfit], 
                     backgroundColor: "#4299e1",
                     borderColor: "#2b6cb0",
                     borderWidth: 2,
@@ -207,7 +211,7 @@ async function generateReport(eventId) {
     doc.moveDown();
 
     const bookingsTable = {
-        headers: ["Sr. No.", "Customer Name", "Type", "Amount (Rs.)", "Status"],
+        headers: ["Sr. No.", "Customer Name", "Type", "Amount (Rs.)", "Status", "Cancellation Charges"],
         rows: bookings.map((b, i) => {
             const types = [
                 { label: "Standard", count: b.noOfPeoples[0] },
@@ -215,21 +219,22 @@ async function generateReport(eventId) {
                 { label: "Child", count: b.noOfPeoples[2] }
             ].filter(t => t.count > 0); // Remove types with count 0
     
+            const cancellationCharges = b.book_status === "Cancelled" ? (b.totalAmount * 0.025).toFixed(4) : "-";
+    
             return [
                 i + 1,  // Sr. No.
                 b.customer_name, // Customer Name
                 types.map(t => `${t.label} (${t.count})`).join("\n"), // Combine types in one cell (newline separated)
                 b.totalAmount, // Amount
-                b.book_status // Status
+                b.book_status, // Status
+                cancellationCharges // Cancellation Charges
             ];
         }),
     };
     
     
-    
-    
     await doc.table(bookingsTable, {
-        columnsSize: [50, 200, 75, 50, 75],
+        columnsSize: [50, 160, 70, 50, 70, 50],
         cellPadding: 5,
         x: 100,
         prepareHeader: () => doc.font("Helvetica-Bold").fontSize(12),
