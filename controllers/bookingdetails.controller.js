@@ -471,8 +471,8 @@ async function updateBooking(req, res) {
                 }
 
                 // Process the refund
-                const refundAmount = booking.totalAmount * 0.975; //95% Refund, 2.5 for Org and 2.5 for Admin
-                const deductAmount = booking.totalAmount * 0.025;
+                const refundAmount = booking.totalAmount * 0.95; //95% Refund, 2.5 for Org and 2.5 for Admin
+                const deductAmount = booking.totalAmount * 0.975;
                 wallet.balance += refundAmount;
                 event.totalAmount -= deductAmount;
 
