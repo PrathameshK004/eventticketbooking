@@ -462,10 +462,12 @@ async function updateBooking(req, res) {
                     description: `Commission from cancelled transaction ID: ${booking.transactionId}`
                 });
 
-                console.log("Admin set success");
                 await adminWallet.save({ session });
+                
+                console.log("Admin set success");
                 await event.save({ session });
                 
+                console.log("Event set success");
                 // Update payment status
                 booking.pay_status = 'Amount Refunded to Wallet';
             }
@@ -476,12 +478,14 @@ async function updateBooking(req, res) {
 
         await booking.save({ session });
 
+        console.log("Booking set success");
         // Commit transaction
         await session.commitTransaction();
         res.status(200).json(booking);
     } catch (err) {
         // Rollback transaction on failure
         await session.abortTransaction();
+        console.log(err.message);
         res.status(500).json({ error: 'Internal server error: ' + err.message });
     } finally {
         session.endSession();
