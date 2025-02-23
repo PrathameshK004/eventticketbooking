@@ -88,10 +88,10 @@ async function generateReport(eventId) {
             "Available Capacity",
             "Total Capacity",
             "Total Bookings",
-            "Successful Bookings",
+            "Succ. Bookings",
             "Cancelled Bookings",
-            "Cancellation Rate",
-            "Cancellation Profit",
+            "Cancel. Rate",
+            "Cancel. Profit",
             "Booking Profit",
             "Total Profit"
         ],
@@ -213,7 +213,7 @@ async function generateReport(eventId) {
     doc.moveDown();
 
     const bookingsTable = {
-        headers: ["Sr. No.", "Customer Name", "Type", "Amount (Rs.)", "Status", "Cancellation Charges"],
+        headers: ["Sr. No.", "Customer Name", "Type", "Amount (Rs.)", "Status", "Cancel. Charges"],
         rows: bookings.map((b, i) => {
             const types = [
                 { label: "Standard", count: b.noOfPeoples[0] },
@@ -221,8 +221,8 @@ async function generateReport(eventId) {
                 { label: "Child", count: b.noOfPeoples[2] }
             ].filter(t => t.count > 0); // Remove types with count 0
     
-            const cancellationCharges = b.book_status === "Cancelled" ? (b.totalAmount * 0.025).toFixed(4) : "-";
-    
+            const cancellationCharges = b.book_status === "Cancelled" ? `Rs. ${(b.totalAmount * 0.025).toFixed(4)}` : "-";
+
             return [
                 i + 1,  // Sr. No.
                 b.customer_name, // Customer Name
