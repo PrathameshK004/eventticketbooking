@@ -1,7 +1,11 @@
 const mongoose = require('mongoose');
 
 const WalletSchema = new mongoose.Schema({
-    userId: { type: String, required: true},
+    userId: { type: String, 
+        required: function() {
+            return this._id.toString() !== process.env.ADMIN_WALLET_ID;
+        }
+    },
     balance: { type: Number, default: 0 },
     transactions: [
         {

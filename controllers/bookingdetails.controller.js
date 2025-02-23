@@ -453,7 +453,6 @@ async function updateBooking(req, res) {
                     return res.status(404).json({ error: 'Admin wallet not found' });
                 }
 
-                console.log("Going into Admin Wallet");
 
                 adminWallet.balance += adminFee;
                 adminWallet.transactions.push({
@@ -464,10 +463,8 @@ async function updateBooking(req, res) {
 
                 await adminWallet.save({ session });
                 
-                console.log("Admin set success");
                 await event.save({ session });
                 
-                console.log("Event set success");
                 // Update payment status
                 booking.pay_status = 'Amount Refunded to Wallet';
             }
@@ -478,7 +475,6 @@ async function updateBooking(req, res) {
 
         await booking.save({ session });
 
-        console.log("Booking set success");
         // Commit transaction
         await session.commitTransaction();
         res.status(200).json(booking);
