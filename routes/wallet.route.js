@@ -10,4 +10,8 @@ router.put('/updateWallet/:userId', verifyToken, walletInterceptor.validateUserW
 router.delete('/deleteWallet/:userId', verifyToken, walletInterceptor.validateUserWallet ,walletController.deleteWallet);
 router.post('/transferToBank/:userId', verifyToken, walletInterceptor.validateUserWallet, walletInterceptor.validateTransferToBank, walletController.transferToBank);
 
+//Admin Wallet
+router.get('/adminWallet/getWalletDetails', verifyToken, walletInterceptor.validateAdminWallet, walletController.getWalletBalance);
+router.put('/adminWallet/updateWallet', verifyToken, walletInterceptor.validateAdminWallet, walletInterceptor.validateUpdateWallet, walletController.updateWallet);
+
 module.exports = router;

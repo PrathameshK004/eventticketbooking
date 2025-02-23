@@ -172,7 +172,7 @@ async function createBookingWithWallet(req, res) {
         // Deduct wallet balance and record transaction atomically
         const updatedWallet = await Wallet.findOneAndUpdate(
             { userId, balance: { $gte: totalAmount } },
-            { 
+            {
                 $inc: { balance: -totalAmount },
                 $push: { transactions: { amount: totalAmount, type: 'Debit', description: `Booking payment for event: ${updatedEvent.eventTitle}` } }
             },
@@ -375,7 +375,7 @@ async function updateBooking(req, res) {
                     await session.abortTransaction();
                     return res.status(403).json({ error: 'Event is pending and not live for users.' });
                 }
-                
+
                 // Ensure the eventId in booking matches the event's _id
                 if (booking.eventId !== event._id.toString()) {
                     await session.abortTransaction();
@@ -383,8 +383,7 @@ async function updateBooking(req, res) {
                 }
 
                 // Check if the update date matches eventDate
-                const indiaDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-                console.log(indiaDate);// Get current date in YYYY-MM-DD format
+                const indiaDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });// Get current date in YYYY-MM-DD format
                 const eventDate = event.eventDate.toISOString().split('T')[0];
 
                 if (indiaDate !== eventDate) {
@@ -429,9 +428,11 @@ async function updateBooking(req, res) {
                 }
 
                 // Process the refund
-                const refundAmount = booking.totalAmount;
+                const refundAmount = booking.totalAmount * 0.95; //95% Refund, 2.5 for Org and 2.5 for Admin
+                const deductionAmount = booking.totalAmount * 0.975;
+                const adminFee = booking.totalAmount * 0.025; // 2.5% for Admin
                 wallet.balance += refundAmount;
-                event.totalAmount -= refundAmount;
+                event.totalAmount -= deductionAmount;
 
                 // Record transaction in wallet
                 wallet.transactions.push({
@@ -440,9 +441,28 @@ async function updateBooking(req, res) {
                     description: `Refund for cancelled transaction ID: ${booking.transactionId}`
                 });
 
-                await event.save({ session });
+                
                 await wallet.save({ session });
 
+                // Credit 2.5% fee to Admin Wallet
+                const adminWalletId = process.env.ADMIN_WALLET_ID;
+                let adminWallet = await Wallet.findById(adminWalletId).session(session);
+
+                if (!adminWallet) {
+                    await session.abortTransaction();
+                    return res.status(404).json({ error: 'Admin wallet not found' });
+                }
+
+                adminWallet.balance += adminFee;
+                adminWallet.transactions.push({
+                    amount: adminFee,
+                    type: 'Credit',
+                    description: `Commission from cancelled transaction ID: ${booking.transactionId}`
+                });
+
+                await adminWallet.save({ session });
+                await event.save({ session });
+                
                 // Update payment status
                 booking.pay_status = 'Amount Refunded to Wallet';
             }

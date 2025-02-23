@@ -184,4 +184,5 @@ async function transferToBank(req, res) {
         console.error("Transfer error:", error);
         res.status(500).json({ message: "Internal Server Error." });
     }
-};
+}
+

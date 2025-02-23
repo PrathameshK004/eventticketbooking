@@ -1,12 +1,14 @@
 const mongoose = require('mongoose');
 const Wallet = require('../modules/wallet.module.js');
+const jwt = require('jsonwebtoken');
 const User = require('../modules/user.module.js');
 
 // Export functions
 module.exports = {
     validateUserWallet,
     validateUpdateWallet,
-    validateTransferToBank
+    validateTransferToBank,
+    validateAdminWallet
 };
 
 // Validate that the user has a wallet and exists
@@ -35,6 +37,52 @@ async function validateUserWallet(req, res, next) {
     }
 }
 
+
+async function validateAdminWallet(req, res, next) {
+    try {
+        const adminWalletId = process.env.ADMIN_WALLET_ID;
+        if (!adminWalletId) {
+            return res.status(500).json({ error: "Admin wallet ID is not set in the environment." });
+        }
+
+        // Find admin wallet
+        const wallet = await Wallet.findById(adminWalletId);
+        if (!wallet) {
+            return res.status(404).json({ error: "Admin wallet not found." });
+        }
+        req.wallet = wallet; 
+
+        const token = req.cookies.jwt;
+        if (!token) {
+            return res.status(403).json({ message: "No token provided, access denied!" });
+        }
+
+        // Verify the JWT token
+        jwt.verify(token, process.env.JWTSecret, async (err, decoded) => {
+            if (err) {
+                return res.status(401).json({ message: "Unauthorized! Invalid token." });
+            }
+
+            try {
+                let user = await User.findById(decoded.key);
+                if (!user) {
+                    return res.status(404).json({ message: "User not found" });
+                }
+                if (!user.roles.includes(2)) {
+                    return res.status(403).json({ message: "User is not Admin" });
+                }
+                next(); 
+            } catch (error) {
+                return res.status(500).json({ message: "Error fetching user", error: error.message });
+            }
+        });
+
+    } catch (error) {
+        return res.status(500).json({ error: "An error occurred", details: error.message });
+    }
+}
+
+ 
 // Validate and check conditions for updating the wallet (credit/debit)
 async function validateUpdateWallet(req, res, next) {
     const { amount, type, description } = req.body;
