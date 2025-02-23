@@ -383,10 +383,11 @@ async function updateBooking(req, res) {
                 }
 
                 // Check if the update date matches eventDate
-                const today = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+                const indiaDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+                console.log(indiaDate);// Get current date in YYYY-MM-DD format
                 const eventDate = event.eventDate.toISOString().split('T')[0];
 
-                if (today !== eventDate) {
+                if (indiaDate !== eventDate) {
                     await session.abortTransaction();
                     return res.status(400).json({ error: 'Booking status can only be updated on the event date.' });
                 }
