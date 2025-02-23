@@ -318,27 +318,24 @@ async function updateBooking(req, res) {
         const bookingId = req.params.bookingId;
         const updatedStatus = req.body.book_status;
 
-        // Find the booking and lock it for update
         const booking = await Booking.findById(bookingId).session(session);
         if (!booking) {
             await session.abortTransaction();
             return res.status(404).json({ error: 'Booking not found' });
         }
 
-        // Calculate total number of people
-        const totalPeople = Array.isArray(booking.noOfPeoples)
-            ? booking.noOfPeoples.reduce((sum, num) => sum + num, 0)
-            : 0;
+        const totalPeople = Array.isArray(booking.noOfPeoples) ? 
+            booking.noOfPeoples.reduce((sum, num) => sum + num, 0) : 0;
 
         // Prevent invalid status changes
         if ((booking.book_status === 'Cancelled' || booking.book_status === 'Completed') && updatedStatus === 'Booked') {
             await session.abortTransaction();
-            return res.status(400).json({ error: 'Cancelled or completed bookings cannot be rebooked' });
+            return res.status(400).json({ error: 'Cannot rebook cancelled or completed bookings' });
         }
 
         if (booking.book_status === 'Cancelled' && updatedStatus === 'Completed') {
             await session.abortTransaction();
-            return res.status(400).json({ error: 'Cancelled bookings cannot be marked as completed' });
+            return res.status(400).json({ error: 'Cancelled bookings cannot be completed' });
         }
 
         if (updatedStatus === 'Cancelled' && booking.book_status !== 'Booked') {
@@ -346,144 +343,106 @@ async function updateBooking(req, res) {
             return res.status(400).json({ error: 'Only "Booked" bookings can be cancelled' });
         }
 
-        if (updatedStatus === 'Completed') {
-            try {
-                const token = req.cookies.jwt;
-                if (!token) {
-                    await session.abortTransaction();
-                    return res.status(401).json({ error: 'No token provided.' });
-                }
-
-                const decoded = jwt.verify(token, process.env.JWTSecret);
-                const userTokenId = decoded.key;
-
-                // Fetch the booking and lock it in the session
-                const booking = await Booking.findById(bookingId).session(session);
-                if (!booking) {
-                    await session.abortTransaction();
-                    return res.status(404).json({ error: 'Booking not found' });
-                }
-
-                // Fetch event and lock it in session
-                const event = await Event.findById(booking.eventId).session(session);
-                if (!event) {
-                    await session.abortTransaction();
-                    return res.status(404).json({ error: 'Event not found' });
-                }
-
-                if (event.isTemp) {
-                    await session.abortTransaction();
-                    return res.status(403).json({ error: 'Event is pending and not live for users.' });
-                }
-
-                // Ensure the eventId in booking matches the event's _id
-                if (booking.eventId !== event._id.toString()) {
-                    await session.abortTransaction();
-                    return res.status(400).json({ error: 'Booking does not belong to this event.' });
-                }
-
-                // Check if the update date matches eventDate
-                const indiaDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });// Get current date in YYYY-MM-DD format
-                const eventDate = event.eventDate.toISOString().split('T')[0];
-
-                if (indiaDate !== eventDate) {
-                    await session.abortTransaction();
-                    return res.status(400).json({ error: 'Booking status can only be updated on the event date.' });
-                }
-
-                if (event.userId.toString() !== userTokenId) {
-                    await session.abortTransaction();
-                    return res.status(403).json({ error: 'You are not authorized to update the booking status.' });
-                }
-            } catch (err) {
-                console.error("JWT Verification Error:", err.message);
+        let event;
+        if (updatedStatus === 'Cancelled' || updatedStatus === 'Completed') {
+            event = await Event.findById(booking.eventId).session(session);
+            if (!event) {
                 await session.abortTransaction();
-                return res.status(401).json({ error: 'Invalid token.' });
+                return res.status(404).json({ error: 'Event not found' });
+            }
 
+            if (event.isTemp) {
+                await session.abortTransaction();
+                return res.status(403).json({ error: 'Event is pending and not live for users.' });
             }
         }
 
-        if (updatedStatus && updatedStatus !== booking.book_status) {
-            if (updatedStatus === 'Cancelled') {
-                // Find the event and lock it for update
-                const event = await Event.findById(booking.eventId).session(session);
-                if (!event) {
-                    await session.abortTransaction();
-                    return res.status(404).json({ error: 'Event not found' });
-                }
-
-                if (event.isTemp) {
-                    await session.abortTransaction();
-                    return res.status(403).json({ error: 'Event is pending and not live for users.' });
-                }
-
-                // Increment event capacity
-                event.eventCapacity += totalPeople;
-
-                // Fetch user's wallet and lock it for update
-                let wallet = await Wallet.findOne({ userId: booking.userId }).session(session);
-                if (!wallet) {
-                    await session.abortTransaction();
-                    return res.status(404).json({ error: 'Wallet not found for the user' });
-                }
-
-                // Process the refund
-                const refundAmount = booking.totalAmount * 0.95; //95% Refund, 2.5 for Org and 2.5 for Admin
-                const deductionAmount = booking.totalAmount * 0.975;
-                const adminFee = booking.totalAmount * 0.025; // 2.5% for Admin
-                wallet.balance += refundAmount;
-                event.totalAmount -= deductionAmount;
-
-                // Record transaction in wallet
-                wallet.transactions.push({
-                    amount: refundAmount,
-                    type: 'Credit',
-                    description: `Refund for cancelled transaction ID: ${booking.transactionId}`
-                });
-
-                
-                await wallet.save({ session });
-
-                // Credit 2.5% fee to Admin Wallet
-                const adminWalletId = process.env.ADMIN_WALLET_ID;
-                let adminWallet = await Wallet.findById(adminWalletId).session(session);
-
-                if (!adminWallet) {
-                    await session.abortTransaction();
-                    return res.status(404).json({ error: 'Admin wallet not found' });
-                }
-
-                adminWallet.balance += adminFee;
-                adminWallet.transactions.push({
-                    amount: adminFee,
-                    type: 'Credit',
-                    description: `Commission from cancelled transaction ID: ${booking.transactionId}`
-                });
-
-                await adminWallet.save({ session });
-                await event.save({ session });
-                
-                // Update payment status
-                booking.pay_status = 'Amount Refunded to Wallet';
+        if (updatedStatus === 'Completed') {
+            const token = req.cookies.jwt;
+            if (!token) {
+                await session.abortTransaction();
+                return res.status(401).json({ error: 'No token provided.' });
             }
 
-            // Update the booking status
-            booking.book_status = updatedStatus;
+            const decoded = jwt.verify(token, process.env.JWTSecret);
+            const userTokenId = decoded.key;
+
+            if (booking.eventId.toString() !== event._id.toString()) {
+                await session.abortTransaction();
+                return res.status(400).json({ error: 'Booking does not belong to this event.' });
+            }
+
+            const indiaDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+            const eventDate = event.eventDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+            if (indiaDate !== eventDate) {
+                await session.abortTransaction();
+                return res.status(400).json({ error: 'Booking status can only be updated on the event date.' });
+            }
+
+            if (event.userId.toString() !== userTokenId) {
+                await session.abortTransaction();
+                return res.status(403).json({ error: 'Unauthorized to update booking status.' });
+            }
         }
 
+        if (updatedStatus === 'Cancelled') {
+            event.eventCapacity += totalPeople;
+
+            let wallet = await Wallet.findOne({ userId: booking.userId }).session(session);
+            if (!wallet) {
+                await session.abortTransaction();
+                return res.status(404).json({ error: 'User wallet not found' });
+            }
+
+            const refundAmount = booking.totalAmount * 0.95;
+            const adminFee = booking.totalAmount * 0.025;
+            const deductionAmount = booking.totalAmount * 0.975;
+
+            wallet.balance += refundAmount;
+            event.totalAmount -= deductionAmount;
+
+            wallet.transactions.push({
+                amount: refundAmount,
+                type: 'Credit',
+                description: `Refund for cancelled booking ID: ${booking.transactionId}`
+            });
+
+            await wallet.save({ session });
+
+            const adminWalletId = process.env.ADMIN_WALLET_ID;
+            let adminWallet = await Wallet.findById(adminWalletId).session(session);
+            if (!adminWallet) {
+                await session.abortTransaction();
+                return res.status(404).json({ error: 'Admin wallet not found' });
+            }
+
+            adminWallet.balance += adminFee;
+            adminWallet.transactions.push({
+                amount: adminFee,
+                type: 'Credit',
+                description: `Admin fee from cancelled booking ID: ${booking.transactionId}`
+            });
+
+            await adminWallet.save({ session });
+            await event.save({ session });
+
+            booking.pay_status = 'Amount Refunded to Wallet';
+        }
+
+        booking.book_status = updatedStatus;
         await booking.save({ session });
 
-        // Commit transaction
         await session.commitTransaction();
         res.status(200).json(booking);
     } catch (err) {
-        // Rollback transaction on failure
         await session.abortTransaction();
         res.status(500).json({ error: 'Internal server error: ' + err.message });
     } finally {
         session.endSession();
     }
 }
+
 
 
 
