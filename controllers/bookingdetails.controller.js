@@ -415,6 +415,7 @@ async function updateBooking(req, res) {
             if (!adminWallet) {
                 await session.abortTransaction();
                 return res.status(404).json({ error: 'Admin wallet not found' });
+                console.log("'Admin wallet not found'");
             }
 
             adminWallet.balance += adminFee;
