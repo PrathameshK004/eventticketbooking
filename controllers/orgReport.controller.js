@@ -255,24 +255,42 @@ async function sendReport(req, res) {
         const event = await Event.findById(eventId);
         if (!event) return res.status(404).json({ error: "Event not found" });
 
-        const pdfBuffer = await generateReport(eventId);
-        const transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: { user: process.env.EMAIL, pass: process.env.EMAIL_PASSWORD },
-        });
+        if (event.isTemp) {
+            return res.status(403).json({ error: "This Event is Pending and not Live for users." });
+        }
 
+        // Generate Report
+        let pdfBuffer;
+        try {
+            pdfBuffer = await generateReport(eventId);
+            if (!pdfBuffer) {
+                return res.status(500).json({ error: "Failed to generate report." });
+            }
+        } catch (err) {
+            console.error("Error generating report:", err);
+            return res.status(500).json({ error: "Error occurred while generating the report." });
+        }
+
+        // Fetch Organizer
         const user = await User.findById(event.userId);
         if (!user) return res.status(404).json({ error: "User not found" });
 
         const eventDate = new Date(event.eventDate).toDateString();
 
+        // Count Total Tickets Sold
         const totalTicketsSold = await BookingDetails.countDocuments({
             eventId: event._id,
             book_status: { $in: ["Booked", "Completed"] }
         });
 
+        // Setup Mail Transporter
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: { user: process.env.EMAIL, pass: process.env.EMAIL_PASSWORD },
+        });
 
-        await transporter.sendMail({
+        // Prepare Email
+        const mailOptions = {
             from: process.env.EMAIL,
             to: user.emailID,
             subject: `Event Report: ${event.eventTitle}`,
@@ -292,10 +310,10 @@ async function sendReport(req, res) {
                         
                         <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px; text-align: center;">
                             <!-- Event Image -->
-                            <img src="${event.imageUrl}" alt="${event.eventTitle}" style="max-width: 120px; border-radius: 5px; margin-bottom: 10px;"> 
+                            ${event.imageUrl ? `<img src="${event.imageUrl}" alt="${event.eventTitle}" style="max-width: 120px; border-radius: 5px; margin-bottom: 10px;">` : ''}
                             
                             <h3 style="color: #333;">${event.eventTitle}</h3>
-                            <p><strong>${eventDate}</strong></p> <!-- Formatted Date -->
+                            <p><strong>${eventDate}</strong></p> 
                         </div>
         
                         <h3 style="color: #0078ff; margin-top: 20px;">Report Details</h3>
@@ -330,17 +348,23 @@ async function sendReport(req, res) {
                 content: pdfBuffer,
                 contentType: "application/pdf"
             }]
-        });
+        };
 
+        // Send Email with Try-Catch
+        try {
+            await transporter.sendMail(mailOptions);
+            res.status(200).json({ message: "Report sent successfully" });
+        } catch (err) {
+            console.error("Error sending email:", err);
+            res.status(500).json({ error: "Failed to send report email", details: err.message });
+        }
 
-
-
-        res.status(200).json({ message: "Report sent successfully" });
     } catch (error) {
         console.error("Error sending report:", error);
         res.status(500).json({ error: "Failed to send report", details: error.message });
     }
 }
+
 
 async function downloadReport(req, res) {
     try {
@@ -348,17 +372,29 @@ async function downloadReport(req, res) {
         const event = await Event.findById(eventId);
         if (!event) return res.status(404).json({ error: "Event not found" });
 
-        const pdfBuffer = await generateReport(eventId);
-    
+        if (event.isTemp) {
+            return res.status(403).json({ error: "This Event is Pending and not Live for users." });
+        }
+
+        let pdfBuffer;
+        try {
+            pdfBuffer = await generateReport(eventId);
+            if (!pdfBuffer) {
+                return res.status(500).json({ error: "Failed to generate report." });
+            }
+        } catch (err) {
+            console.error("Error generating report:", err);
+            return res.status(500).json({ error: "Error occurred while generating the report." });
+        }
+
         res.setHeader("Content-Disposition", `attachment; filename="${event.eventTitle}_Report.pdf"`);
         res.setHeader("Content-Type", "application/pdf");
-
         res.send(pdfBuffer);
+
     } catch (error) {
         console.error("Error downloading report:", error);
         res.status(500).json({ error: "Failed to download report", details: error.message });
     }
 }
-
 
 module.exports = { generateReport, sendReport, downloadReport };

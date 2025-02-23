@@ -53,27 +53,39 @@ async function createBooking(req, res) {
     try {
         const { userId, eventId, noOfPeoples, totalAmount } = req.body;
 
-        // Calculate the sum of the array of `noOfPeoples`
+        // Calculate the total number of people
         const totalPeople = Array.isArray(noOfPeoples) ? noOfPeoples.reduce((sum, num) => sum + num, 0) : 0;
 
-        // Find the event and lock it for update
+        // Fetch event and lock it for update
         const event = await Event.findById(eventId).session(session);
         if (!event) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(404).json({ message: "Event not found" });
         }
 
-        // Ensure event has enough capacity
-        if (event.eventCapacity < totalPeople) {
+        if (event.isTemp) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(403).json({ error: 'Event is pending and not live for users.' });
+        }
+
+        // Atomically update event capacity and total amount
+        const updatedEvent = await Event.findOneAndUpdate(
+            { _id: eventId, eventCapacity: { $gte: totalPeople } }, // Ensure enough capacity
+            { $inc: { eventCapacity: -totalPeople, totalAmount: totalAmount } },
+            { new: true, session }
+        );
+
+        if (!updatedEvent) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(400).json({ message: "Not enough capacity for this booking." });
         }
 
-        // Create the booking within the transaction
-        const newBooking = await Booking.create([{ ...req.body }], { session });
-
-        // Update event capacity and total amount
-        event.eventCapacity -= totalPeople;
-        event.totalAmount = (event.totalAmount || 0) + totalAmount;
-        await event.save({ session });
+        // Create booking inside the transaction
+        const newBooking = new Booking({ ...req.body });
+        await newBooking.save({ session });
 
         // Commit transaction
         await session.commitTransaction();
@@ -85,18 +97,23 @@ async function createBooking(req, res) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        await sendBookingConfirmationEmail(user.emailID, newBooking[0], event);
+        // Send booking confirmation email
+        await sendBookingConfirmationEmail(user.emailID, newBooking, updatedEvent);
 
+        // Send notification (wrap in try-catch to avoid breaking flow)
         try {
-            await notificationController.sendNotification("bookings", "Booking Confirmed", `Your booking for  "${event.eventTitle}" has been confirmed.`, userId)
-        }
-        catch (err) {
+            await notificationController.sendNotification(
+                "bookings",
+                "Booking Confirmed",
+                `Your booking for "${updatedEvent.eventTitle}" has been confirmed.`,
+                userId
+            );
+        } catch (err) {
             console.error("Failed to create notification:", err);
         }
 
-        res.status(201).json(newBooking[0]);
+        res.status(201).json(newBooking);
     } catch (error) {
-        // Rollback transaction on failure
         await session.abortTransaction();
         session.endSession();
 
@@ -118,47 +135,55 @@ async function createBookingWithWallet(req, res) {
     try {
         const { userId, eventId, noOfPeoples, totalAmount } = req.body;
 
-        // Calculate the sum of the array of `noOfPeoples`
+        // Calculate the total number of people
         const totalPeople = Array.isArray(noOfPeoples) ? noOfPeoples.reduce((sum, num) => sum + num, 0) : 0;
 
         // Fetch wallet within transaction
         const wallet = await Wallet.findOne({ userId }).session(session);
         if (!wallet) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(404).json({ message: "Wallet not found for the user" });
         }
 
-        // Check if the wallet has enough balance
         if (wallet.balance < totalAmount) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(400).json({ message: "Insufficient wallet balance for the booking" });
         }
 
-        // Find the event and lock it for update
-        const event = await Event.findById(eventId).session(session);
-        if (!event) {
-            return res.status(404).json({ message: "Event not found" });
-        }
+        // Atomically update event capacity and total amount
+        const updatedEvent = await Event.findOneAndUpdate(
+            { _id: eventId, eventCapacity: { $gte: totalPeople } },
+            { $inc: { eventCapacity: -totalPeople, totalAmount: totalAmount } },
+            { new: true, session }
+        );
 
-        // Ensure event has enough capacity
-        if (event.eventCapacity < totalPeople) {
+        if (!updatedEvent) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(400).json({ message: "Not enough capacity for this booking." });
         }
 
-        // Create the booking within the transaction
-        const newBooking = await Booking.create([{ ...req.body }], { session });
+        // Create booking within transaction
+        const newBooking = new Booking({ ...req.body });
+        await newBooking.save({ session });
 
-        // Update event capacity and total amount
-        event.eventCapacity -= totalPeople;
-        event.totalAmount = (event.totalAmount || 0) + totalAmount;
-        await event.save({ session });
+        // Deduct wallet balance and record transaction atomically
+        const updatedWallet = await Wallet.findOneAndUpdate(
+            { userId, balance: { $gte: totalAmount } },
+            { 
+                $inc: { balance: -totalAmount },
+                $push: { transactions: { amount: totalAmount, type: 'Debit', description: `Booking payment for event: ${updatedEvent.eventTitle}` } }
+            },
+            { new: true, session }
+        );
 
-        // Deduct wallet balance and record transaction
-        wallet.balance -= totalAmount;
-        wallet.transactions.push({
-            amount: totalAmount,
-            type: 'Debit',
-            description: `Booking payment for event: ${event.eventTitle}`,
-        });
-        await wallet.save({ session });
+        if (!updatedWallet) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: "Insufficient wallet balance for the booking" });
+        }
 
         // Commit transaction
         await session.commitTransaction();
@@ -170,17 +195,23 @@ async function createBookingWithWallet(req, res) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        await sendBookingConfirmationEmail(user.emailID, newBooking[0], event);
+        // Send booking confirmation email
+        await sendBookingConfirmationEmail(user.emailID, newBooking, updatedEvent);
+
+        // Send notification (wrap in try-catch to avoid breaking the main flow)
         try {
-            await notificationController.sendNotification("bookings", "Booking Confirmed", `Your booking for  "${event.eventTitle}" has been confirmed.`, userId)
-        }
-        catch (err) {
+            await notificationController.sendNotification(
+                "bookings",
+                "Booking Confirmed",
+                `Your booking for "${updatedEvent.eventTitle}" has been confirmed.`,
+                userId
+            );
+        } catch (err) {
             console.error("Failed to create notification:", err);
         }
 
-        res.status(201).json(newBooking[0]);
+        res.status(201).json(newBooking);
     } catch (error) {
-        // Rollback transaction on failure
         await session.abortTransaction();
         session.endSession();
 
@@ -194,6 +225,7 @@ async function createBookingWithWallet(req, res) {
         res.status(500).json({ message: "Internal server error: " + error.message });
     }
 }
+
 
 
 async function sendBookingConfirmationEmail(userEmail, booking, event) {
@@ -325,11 +357,38 @@ async function updateBooking(req, res) {
                 const decoded = jwt.verify(token, process.env.JWTSecret);
                 const userTokenId = decoded.key;
 
+                // Fetch the booking and lock it in the session
+                const booking = await Booking.findById(bookingId).session(session);
+                if (!booking) {
+                    await session.abortTransaction();
+                    return res.status(404).json({ error: 'Booking not found' });
+                }
+
                 // Fetch event and lock it in session
                 const event = await Event.findById(booking.eventId).session(session);
                 if (!event) {
                     await session.abortTransaction();
                     return res.status(404).json({ error: 'Event not found' });
+                }
+
+                if (event.isTemp) {
+                    await session.abortTransaction();
+                    return res.status(403).json({ error: 'Event is pending and not live for users.' });
+                }
+                
+                // Ensure the eventId in booking matches the event's _id
+                if (booking.eventId !== event._id.toString()) {
+                    await session.abortTransaction();
+                    return res.status(400).json({ error: 'Booking does not belong to this event.' });
+                }
+
+                // Check if the update date matches eventDate
+                const today = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+                const eventDate = event.eventDate;
+
+                if (today !== eventDate) {
+                    await session.abortTransaction();
+                    return res.status(400).json({ error: 'Booking status can only be updated on the event date.' });
                 }
 
                 if (event.userId.toString() !== userTokenId) {
@@ -351,6 +410,11 @@ async function updateBooking(req, res) {
                 if (!event) {
                     await session.abortTransaction();
                     return res.status(404).json({ error: 'Event not found' });
+                }
+
+                if (event.isTemp) {
+                    await session.abortTransaction();
+                    return res.status(403).json({ error: 'Event is pending and not live for users.' });
                 }
 
                 // Increment event capacity
