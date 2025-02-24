@@ -28,7 +28,8 @@ module.exports = {
     updateEvent,
     deleteEvent,
     createTempEvent,
-    getEventsOfOrg
+    getEventsOfOrg,
+    checkToken
 };
 
 // Get all events
@@ -444,6 +445,37 @@ async function deleteEvent(req, res) {
     } catch (err) {
         console.error(err);
         return res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
+
+async function checkToken(req, res) {
+    try {
+        const token = req.params.token;
+
+        if (!token) {
+            return res.status(400).json({ success: false, message: "Token is required" });
+        }
+
+        const tokenDoc = await Token.findOne({ token });
+
+        if (!tokenDoc) {
+            return res.status(404).json({ success: false, message: "Token not found" });
+        }
+
+        if (tokenDoc.used) {
+            return res.status(401).json({ success: false, message: "Token has already been used" });
+        }
+
+        if (tokenDoc.expiresAt < new Date()) {
+            return res.status(401).json({ success: false, message: "Token has expired" });
+        }
+
+        return res.status(200).json({ success: true, message: "Token is valid and unused" });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Error while validating token" });
     }
 }
 

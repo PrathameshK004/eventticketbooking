@@ -12,6 +12,7 @@ const eventSchema = new mongoose.Schema({
     eventRating: { type: Number, min: 0, max: 5 },
     eventCapacity: { type: Number, required: true },
     totalEventCapacity: { type: Number },
+    //eventType: { type: String, required: true},
     eventDuration: { 
         type: String, 
         required: true, 

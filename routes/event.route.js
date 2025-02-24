@@ -34,6 +34,7 @@ router.get('/getEventsOfOrg/:userId', verifyToken, eventInterceptor.validateOrgI
 router.get('/:eventId', eventInterceptor.validateEventId, eventController.getEventById);
 router.post('/addEvent', verifyToken, upload.single('file'), eventInterceptor.validateNewEvent, eventController.createEvent);
 router.post('/addEvent/:token', eventInterceptor.validateTokenReuse, verifyToken, upload.single('file'), eventInterceptor.validateNewEvent, eventController.createTempEvent);
+router.get('/validateToken/:token', verifyToken, eventController.checkToken);
 router.put('/:eventId', verifyToken, upload.single('file'), eventInterceptor.validateUpdateEvent, eventController.updateEvent);
 router.delete('/:eventId', verifyToken, eventInterceptor.validateEventId, eventController.deleteEvent);
 
