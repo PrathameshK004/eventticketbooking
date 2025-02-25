@@ -33,5 +33,6 @@ router.post('/sendAddOrgEnquiry', verifyToken, upload.single('file'), enquiryInt
 router.get('/allEnquiries/:adminId', verifyToken, enquiryInterceptor.validateAdminAndEnquiry, enquiryController.getAllEnquiries);
 router.get('/getEnquiryByUserId/:userId', verifyToken, enquiryInterceptor.validateUserId, enquiryController.getEnquiryByUserId);
 router.put('/respondEnquiry/:enquiryId/:adminId', verifyToken, enquiryInterceptor.validateEnquiryId, enquiryInterceptor.validateAdminAndEnquiry, enquiryInterceptor.validateEnquiryResponse, enquiryController.respondToEnquiry);
+router.delete('/deleteEnquiry/:enquiryId', verifyToken, enquiryInterceptor.validateEnquiryId, enquiryController.deleteEnquiry);
 
 module.exports = router;

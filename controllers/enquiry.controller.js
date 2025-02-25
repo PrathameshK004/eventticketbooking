@@ -36,7 +36,8 @@ module.exports = {
     getAllEnquiries,
     respondToEnquiry,
     sendOrgEnquiry,
-    getEnquiryByUserId
+    getEnquiryByUserId,
+    deleteEnquiry,
 };
 
 async function sendEnquiry(req, res) {
@@ -50,6 +51,35 @@ async function sendEnquiry(req, res) {
     }
 };
 
+
+async function deleteEnquiry(req, res) {
+    try {
+        const { enquiryId } = req.params;
+
+        const enquiry = await Enquiry.findById(enquiryId);
+        if(!enquiry){
+            return res.status(404).json({ message: 'Enquiry not found' });
+        }
+
+        if(enquiry.type === "Organizer Request" && enquiry.status === "Pending"){
+            if (enquiry.fileId) {
+                await bucket.delete(new ObjectId(enquiry.fileId));
+            }    
+        }
+
+        const deletedEnquiry = await Enquiry.findByIdAndDelete(enquiryId);
+
+        if (!deletedEnquiry) {
+            return res.status(404).json({ message: 'Enquiry not found' });
+        }
+
+
+        res.json({ message: 'Enquiry successfully deleted' });
+    } catch (error) {
+        console.error('Error deleting enquiry:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
 
 async function getEnquiryByUserId(req, res) {
     try {

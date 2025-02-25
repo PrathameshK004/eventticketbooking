@@ -491,6 +491,15 @@ function getEventsOfOrg(req, res) {
                 await bucket.delete(new ObjectId(event.fileId));
             }
 
+            if (event.userId) {
+                const user = await User.findById(event.userId);
+                if (user) {
+                    user.eventId.pull(event._id.toString()); 
+                    await user.save(); 
+                }
+            }
+
+
             return res.status(204).end();
         } catch (err) {
             console.error(err);
