@@ -8,7 +8,7 @@ const uploadRoutes = require('./routes/upload.route');
 const retrieveEnquiryRoutes = require('./routes/enquiryFileRetrieve.route');
 const retrieveRoutes = require('./routes/retrieve.route');
 const cors = require('cors');
-//require('./cronJobs');
+require('./cronJobs');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 

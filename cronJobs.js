@@ -1,110 +1,119 @@
 const cron = require('node-cron');
-const Event = require('./modules/event.module.js');
-const Wallet = require('./modules/wallet.module.js');
-const User = require('./modules/user.module.js');
-const Enquiry = require('./modules/enquiry.module.js');
-const { GridFSBucket } = require('mongodb');
-const ObjectId = require('mongoose').Types.ObjectId;
 const mongoose = require('mongoose');
+const { GridFSBucket } = require('mongodb');
+const moment = require('moment');
+const ObjectId = require('mongoose').Types.ObjectId;
 
-// Initialize GridFSBucket
-let bucket;
+const Event = require('./modules/event.module.js'); // Event with startTime
+const User = require('./modules/user.module.js');
+const Enquiry = require('./modules/enquiry.module.js'); // 1 month old
+const Notification = require('./modules/notification.module.js'); // 10 days old
+const Token = require('./modules/token.module.js'); // If expired
+
+// Initialize GridFSBuckets for different collections
+let eventBucket, enquiryBucket;
 
 const conn = mongoose.connection;
 conn.once('open', () => {
-    bucket = new GridFSBucket(conn.db, { bucketName: 'uploads' });
+    eventBucket = new GridFSBucket(conn.db, { bucketName: 'uploads' }); // For event files
+    enquiryBucket = new GridFSBucket(conn.db, { bucketName: 'enquiryUploads' }); // For enquiry files
 });
 
-// Function to convert Date to cron format (HH:mm format)
-function dateToCron(date) {
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    return `${minutes} ${hours} * * *`; // Runs at the specific hour and minute of the day
-}
-
-// Function to schedule deletion of events and enquiries
-async function scheduleDataDeletion() {
+// Function to delete expired tokens
+async function deleteExpiredTokens() {
     try {
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Get today’s date (midnight)
-
-        // Find events happening today
-        const events = await Event.find({
-            eventDate: { $gte: today },
-            eventTime: { $exists: true }
-        });
-
-        events.forEach(event => {
-            const eventStartTime = new Date(`${event.eventDate.toISOString().split('T')[0]}T${event.eventTime.startTime}:00`);
-            const timeDifference = eventStartTime - now; // Time difference in milliseconds
-
-            if (timeDifference > 0) {
-                // Schedule a task to delete the event at its start time
-                const cronPattern = dateToCron(eventStartTime); // Convert Date to cron pattern
-                cron.schedule(cronPattern, async () => {
-                    try {
-                        // Fetch the organizer's wallet using userId
-                        const wallet = await Wallet.findOne({ userId: event.userId });
-                        if (!wallet) {
-                            console.error(`Wallet for organizer ${event.userId} not found.`);
-                            return;
-                        }
-
-                        // Credit the event's totalAmount to the organizer's wallet
-                        wallet.balance += event.totalAmount;
-
-                        // Record the transaction in the wallet
-                        wallet.transactions.push({
-                            amount: event.totalAmount,
-                            type: 'Credit',
-                            description: `Event payment for "${event.eventTitle}" credited at event start time.`
-                        });
-
-                        // Save the updated wallet
-                        await wallet.save();
-
-                        // Delete the event after updating the wallet
-                        const eventDel = await Event.deleteOne({ _id: event._id });
-                        if (eventDel.fileId) {
-                            await bucket.delete(new ObjectId(eventDel.fileId));
-                        }
-                        console.log(`Event "${event.eventTitle}" deleted and payment credited`);
-
-                        // Fetch the user (organizer)
-                        const user = await User.findById(event.userId);
-                        if (user) {
-                            // Remove the event ID from the user's event list
-                            await User.updateOne(
-                                { _id: event.userId },
-                                { $pull: { eventId: event._id } } // Assuming `eventId` is the array of event references in the user schema
-                            );
-                            console.log(`Event "${event.eventTitle}" removed from user ${user._id}'s event list.`);
-                        }
-                    } catch (error) {
-                        console.error('Error processing event payment or deletion:', error);
-                    }
-                });
-            }
-        });
-
-        // Find Enquiries created more than 3 days ago
-        const threeDaysAgo = new Date(now);
-        threeDaysAgo.setDate(now.getDate() - 5);
-
-        // Directly delete enquiries older than 3 days
-        const result = await Enquiry.deleteMany({
-            createdAt: { $lt: threeDaysAgo }
-        });
-
-        console.log(`Deleted ${result.deletedCount} enquiries older than 5 days.`);
-
-    } catch (error) {
-        console.error('Error scheduling event deletions or enquiry deletions:', error);
+        const result = await Token.deleteMany({ expiresAt: { $lt: new Date() } });
+        console.log(`Deleted expired tokens: ${result.deletedCount}`);
+    } catch (err) {
+        console.error('Error deleting expired tokens:', err);
     }
 }
 
-// Call the function to schedule deletions
-scheduleDataDeletion();
+// Function to delete past events
+async function deletePastEvents() {
+    try {
+        const pastEvents = await Event.find(); // Fetch all events
 
-// Schedule the deletion check every minute
+        const now = new Date(); // Current date and time
+
+        for (const event of pastEvents) {
+            if (!event.eventTime || !event.eventDate) continue; // Skip if missing data
+
+            // Extract the start time (first part before "-")
+            const startTimeStr = event.eventTime.split('-')[0].trim(); // "HH:MM AM/PM"
+
+            // Convert eventDate (ISO format) + startTime into a full DateTime object
+            const eventDateTime = moment(event.eventDate).format('YYYY-MM-DD') + ' ' + startTimeStr;
+            const eventFullDateTime = moment(eventDateTime, 'YYYY-MM-DD hh:mm A').toDate();
+
+            // Check if event is in the past
+            if (eventFullDateTime < now) {
+                // Delete associated files from the "uploads" bucket
+                if (event.fileId) {
+                    await eventBucket.delete(new ObjectId(event.fileId));
+                }
+
+                // Remove event references from User collection
+                await User.updateMany({ eventId: event._id }, { $pull: { eventId: event._id } });
+
+                // Delete the event itself
+                await Event.deleteOne({ _id: event._id });
+
+                console.log(`Deleted event: ${event._id}`);
+            }
+        }
+
+    } catch (err) {
+        console.error('Error deleting past events:', err);
+    }
+}
+
+
+// Function to delete old enquiries (older than 1 month)
+async function deleteOldEnquiries() {
+    try {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+        const oldEnquiries = await Enquiry.find({ createdAt: { $lt: oneMonthAgo } });
+
+        for (const enquiry of oldEnquiries) {
+            // Delete associated files from the "enquiryUploads" bucket
+            if (enquiry.fileId) {
+                await enquiryBucket.delete(new ObjectId(enquiry.fileId));
+            }
+            await Enquiry.deleteOne({ _id: enquiry._id });
+        }
+
+        console.log(`Deleted old enquiries: ${oldEnquiries.length}`);
+    } catch (err) {
+        console.error('Error deleting old enquiries:', err);
+    }
+}
+
+// Function to delete old notifications (older than 10 days)
+async function deleteOldNotifications() {
+    try {
+        const tenDaysAgo = new Date();
+        tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+
+        const result = await Notification.deleteMany({ createdAt: { $lt: tenDaysAgo } });
+
+        console.log(`Deleted old notifications: ${result.deletedCount}`);
+    } catch (err) {
+        console.error('Error deleting old notifications:', err);
+    }
+}
+
+// Function to schedule all deletions
+async function scheduleDataDeletion() {
+    await deleteExpiredTokens();
+    await deletePastEvents();
+    await deleteOldEnquiries();
+    await deleteOldNotifications();
+}
+
+// Run cleanup function every minute
 cron.schedule('* * * * *', scheduleDataDeletion);
+
+console.log('Cron jobs scheduled for automatic data cleanup.');
