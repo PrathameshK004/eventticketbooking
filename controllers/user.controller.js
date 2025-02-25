@@ -5,11 +5,15 @@ const mongoose = require('mongoose');
 const User = require('../modules/user.module.js');
 const Event = require('../modules/event.module.js');
 const Enquiry = require('../modules/enquiry.module.js');
+const Booking = require('../modules/bookingdetails.module.js');
+const Notification = require('../modules/notification.module.js');
+const AdminNotification = require('../modules/adminNotification.module.js');
 const jwt = require('jsonwebtoken');
 const ObjectId = require('mongoose').Types.ObjectId;
 const nodemailer = require('nodemailer');
 const axios = require('axios');
 const bcrypt = require('bcrypt');
+const { GridFSBucket } = require("mongodb");
 
 require('dotenv').config();
 
@@ -36,7 +40,7 @@ module.exports = {
 
 function isUuidValid(userId) {
 
-  return mongoose.Types.ObjectId.isValid(userId);
+    return mongoose.Types.ObjectId.isValid(userId);
 }
 
 const generateOTP = () => Math.floor(1000 + Math.random() * 9000);
@@ -340,20 +344,56 @@ async function createTempUser(req, res) {
 
 async function deleteUser(req, res) {
     const userId = req.params.userId;
+    const objectId = new mongoose.Types.ObjectId(userId);
 
     try {
+        // Delete the user
         const user = await User.findByIdAndDelete(userId);
-        await Wallet.findOneAndDelete({ userId: userId });
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ error: "User not found" });
         }
 
-        return res.status(204).end();
+        // Get database connection
+        const db = mongoose.connection.db;
+
+        // Setup GridFS buckets
+        const eventBucket = new GridFSBucket(db, { bucketName: "uploads" });
+        const enquiryBucket = new GridFSBucket(db, { bucketName: "enquiryUploads" });
+
+        // Fetch fileIds from Event and Enquiry collections
+        const eventUploads = await Event.find({ userId }, "fileId").lean();
+        const enquiryUploads = await Enquiry.find({ userId: objectId }, "fileId").lean();
+
+        // Filter out documents
+        const eventFileIds = eventUploads.map(event => new mongoose.Types.ObjectId(event.fileId));
+
+        const enquiryFileIds = enquiryUploads
+            .filter(enquiry => enquiry.fileId) // Keep only valid fileIds
+            .map(enquiry => new mongoose.Types.ObjectId(enquiry.fileId));
+
+        // Delete files from GridFS
+        const deleteEventFiles = eventFileIds.map(fileId => eventBucket.delete(fileId));
+        const deleteEnquiryFiles = enquiryFileIds.map(fileId => enquiryBucket.delete(fileId));
+
+        // Execute all delete operations in parallel
+        await Promise.all([
+            Wallet.findOneAndDelete({ userId }),
+            Event.deleteMany({ userId }),
+            Enquiry.deleteMany({ userId: objectId }),
+            Notification.deleteMany({ userId: objectId }),
+            Booking.deleteMany({ userId }),
+            AdminNotification.deleteMany({ userId }),
+            Promise.all(deleteEventFiles), // Delete event files from GridFS
+            Promise.all(deleteEnquiryFiles) // Delete enquiry files from GridFS
+        ]);
+
+        return res.status(204).end(); // No content
     } catch (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'Internal server error' });
+        console.error("Error deleting user:", err);
+        return res.status(500).json({ error: "Internal server error" });
     }
 }
+
 
 async function validateLogin(req, res) {
     try {
@@ -620,12 +660,12 @@ async function getHoldBalance(req, res) {
             return res.status(400).json({ error: 'User ID is required and must be a valid UUID.' });
         }
 
-        const user = await User.findById( userId );
-        if (!user || user.isTemp)  {
+        const user = await User.findById(userId);
+        if (!user || user.isTemp) {
             return res.status(400).json({ error: 'User not Found.' });
         }
 
-        if(!user.roles.includes(1)){
+        if (!user.roles.includes(1)) {
             return res.status(403).json({ error: 'You are not an Organizer.' });
         }
 
@@ -645,14 +685,14 @@ async function getHoldBalance(req, res) {
 async function checkPendingOrgReq(req, res) {
     const userId = req.params.userId;
     try {
-        const enquiries = await Enquiry.find({ 
+        const enquiries = await Enquiry.find({
             userId: userId,
             type: "Organizer Request",
             status: "Pending"
         });
 
         if (enquiries.length > 0) {
-            return res.status(200).json({ success: true });  
+            return res.status(200).json({ success: true });
         }
 
         return res.status(404).json({ success: false, message: "No pending Organizer Requests found." });

@@ -30,6 +30,7 @@ const upload = multer({
 // Define routes
 
 router.get('/allEvents', eventController.getAllEvents);
+router.get('/getFilterEvents', eventController.getAllEventsByFilter);
 router.get('/getEventsOfOrg/:userId', verifyToken, eventInterceptor.validateOrgId, eventController.getEventsOfOrg);
 router.get('/:eventId', eventInterceptor.validateEventId, eventController.getEventById);
 router.post('/addEvent', verifyToken, upload.single('file'), eventInterceptor.validateNewEvent, eventController.createEvent);

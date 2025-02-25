@@ -35,11 +35,11 @@ async function validateOrgId(req, res, next) {
     return res.status(400).json({ error: 'Invalid userId. Please provide a valid UUID.' });
   }
   const user = await User.findById(userId);
-  if(!user){
+  if (!user) {
     return res.status(400).json({ error: 'User not found.' });
   }
 
-  if(!user.roles.includes(1)){
+  if (!user.roles.includes(1)) {
     return res.status(400).json({ error: 'You are not Organizer' });
   }
 
@@ -59,7 +59,7 @@ function validateEventId(req, res, next) {
 function validateEventData(eventData, isUpdate = false) {
   const errors = [];
 
-  const requiredFields = ['eventTitle', 'eventDate', 'eventAddress', 'eventOrganizer', 'eventPrice', 'eventLanguage', 'eventDescription', 'eventDuration', 'eventCapacity'];
+  const requiredFields = ['eventTitle', 'eventDate', 'eventAddress', 'eventOrganizer', 'eventPrice', 'eventLanguage', 'eventDescription', 'eventTime', 'eventType', 'eventCapacity'];
 
   if (!isUpdate) {
     requiredFields.forEach(field => {
@@ -77,9 +77,17 @@ function validateEventData(eventData, isUpdate = false) {
     errors.push('Event capacity cannot be less than 1.');
   }
 
-  if (eventData.eventDuration && !/^\d+\s+(hours?|minutes?)$/.test(eventData.eventDuration)) {
-    errors.push(`${eventData.eventDuration} is not a valid duration format! Use "X hours" or "Y minutes".`);
+  if (
+    !/^(0?[1-9]|1[0-2]):[0-5]\d (AM|PM)-(0?[1-9]|1[0-2]):[0-5]\d (AM|PM)$/.test(
+      eventData.eventTime
+    )
+  ) {
+    errors.push(
+      `${eventData.eventTime} is not a valid event time format! Use "HH:MM AM/PM - HH:MM AM/PM", where hours are 01-12 and minutes are 00-59.`
+    );
   }
+
+
 
   if (eventData.eventDate && isDateInPast(eventData.eventDate)) {
     errors.push('Event date cannot be in the past.');

@@ -12,18 +12,8 @@ const eventSchema = new mongoose.Schema({
     eventRating: { type: Number, min: 0, max: 5 },
     eventCapacity: { type: Number, required: true },
     totalEventCapacity: { type: Number },
-    //eventType: { type: String, required: true},
-    eventDuration: { 
-        type: String, 
-        required: true, 
-        trim: true,
-        validate: {
-            validator: function(value) {
-                return /^\d+\s+(hours?|minutes?)$/.test(value);
-            },
-            message: props => `${props.value} is not a valid duration format! Use "X hours" or "Y minutes".`
-        }
-    },
+    eventType: { type: String, required: true},
+    eventTime: { type: String, required: true },
     eventFeatures: [{ type: String, trim: true }], 
     eventTags: [{ type: String, trim: true }],
     eventOrgInsta: { type: String, trim: true },
@@ -32,7 +22,8 @@ const eventSchema = new mongoose.Schema({
     userId: { type: String, required: true },
     fileId: {type: String },
     totalAmount: {type: Number},
-    isTemp: { type: Boolean, default: true}
+    isTemp: { type: Boolean, default: true},
+    approveDate: { type: Date }
 }, { versionKey: false });
 
 

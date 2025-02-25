@@ -9,7 +9,8 @@ const adminNotificationSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
     eventDetails: { type: mongoose.Schema.Types.ObjectId, ref: 'Event' },
     status: { type: String, default: 'Pending', enum: ['Pending', 'Accepted', 'Rejected'] },
-    remarks: { type: String }
+    remarks: { type: String },
+    userId: { type: String }
 });
 
 
