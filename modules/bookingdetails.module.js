@@ -30,6 +30,18 @@ const bookingDetailsSchema = new mongoose.Schema({
         type: String, 
         enum: ['Booked', 'Cancelled', 'Completed'], 
         default: 'Booked' 
+    },
+    isCoupon: { type: Boolean, default: false },
+    couponCode: { 
+        type: String, 
+        validate: {
+            validator: function(value) {
+                // Ensure couponCode is only set if isCoupon is true
+                return this.isCoupon ? !!value : !value;
+            },
+            message: "couponCode should only be provided when isCoupon is true."
+        },
+        match: [/^[A-Z0-9]+$/, 'Coupon code must contain only uppercase letters and numbers'] 
     }
 });
 

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Booking = require('../modules/bookingdetails.module.js');
 const Event = require('../modules/event.module.js');
+const Coupon = require('../modules/coupon.module.js');
 const User = require('../modules/user.module.js');
 const mongoose = require('mongoose');
 const Wallet = require('../modules/wallet.module.js');
@@ -51,7 +52,7 @@ async function createBooking(req, res) {
     session.startTransaction();
 
     try {
-        const { userId, eventId, noOfPeoples, totalAmount } = req.body;
+        const { userId, eventId, noOfPeoples, totalAmount, isCoupon, couponCode } = req.body;
 
         // Calculate the total number of people
         const totalPeople = Array.isArray(noOfPeoples) ? noOfPeoples.reduce((sum, num) => sum + num, 0) : 0;
@@ -70,9 +71,41 @@ async function createBooking(req, res) {
             return res.status(403).json({ error: 'Event is pending and not live for users.' });
         }
 
+        if (isCoupon && couponCode) {
+            const coupon = await Coupon.findOne({ code: couponCode }).session(session);
+
+            if (!coupon) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ error: "Invalid coupon code." });
+            }
+
+            if (coupon.eventId !== eventId) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ error: "Coupon is not valid for this event." });
+            }
+
+            if (coupon.status !== 'Active' || coupon.noOfUses <= 0) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ error: "Coupon is either inactive or has reached its usage limit." });
+            }
+
+            if (new Date() > new Date(coupon.expirationDate)) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ error: "Coupon has expired." });
+            }
+
+            coupon.noOfUses -= 1;
+            await coupon.save({ session });
+        }
+
         const totalAmountWithCommission = parseFloat(
-            (totalAmount - totalAmount * 0.025).toFixed(2)
+            (req.body.totalAmount - req.body.totalAmount * 0.025).toFixed(2)
         );
+
         // Atomically update event capacity and total amount
         const updatedEvent = await Event.findOneAndUpdate(
             { _id: eventId, eventCapacity: { $gte: totalPeople } }, // Ensure enough capacity
@@ -85,7 +118,6 @@ async function createBooking(req, res) {
             session.endSession();
             return res.status(400).json({ message: "Not enough capacity for this booking." });
         }
-
 
         // Create booking inside the transaction
         const newBooking = new Booking({ ...req.body });
@@ -100,7 +132,6 @@ async function createBooking(req, res) {
             await session.abortTransaction();
             return res.status(404).json({ error: 'Admin wallet not found' });
         }
-
 
         adminWallet.balance += adminFee;
         adminWallet.transactions.push({
@@ -129,7 +160,7 @@ async function createBooking(req, res) {
             await notificationController.sendNotification(
                 "bookings",
                 "Booking Confirmed",
-                `Your booking for "${updatedEvent.eventTitle}" has been confirmed.`,
+                `Your booking for "${updatedEvent.eventTitle}" has been confirmed.''}`,
                 userId
             );
         } catch (err) {
@@ -152,12 +183,13 @@ async function createBooking(req, res) {
     }
 }
 
+
 async function createBookingWithWallet(req, res) {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-        const { userId, eventId, noOfPeoples, totalAmount } = req.body;
+        const { userId, eventId, noOfPeoples, totalAmount, isCoupon, couponCode } = req.body;
 
         // Calculate the total number of people
         const totalPeople = Array.isArray(noOfPeoples) ? noOfPeoples.reduce((sum, num) => sum + num, 0) : 0;
@@ -175,6 +207,38 @@ async function createBookingWithWallet(req, res) {
             session.endSession();
             return res.status(400).json({ message: "Insufficient wallet balance for the booking" });
         }
+
+        if (isCoupon && couponCode) {
+            const coupon = await Coupon.findOne({ code: couponCode }).session(session);
+
+            if (!coupon) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ error: "Invalid coupon code." });
+            }
+
+            if (coupon.eventId !== eventId) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ error: "Coupon is not valid for this event." });
+            }
+
+            if (coupon.status !== 'Active' || coupon.noOfUses <= 0) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ error: "Coupon is either inactive or has reached its usage limit." });
+            }
+
+            if (new Date() > new Date(coupon.expirationDate)) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ error: "Coupon has expired." });
+            }
+
+            coupon.noOfUses -= 1;
+            await coupon.save({ session });
+        }
+
 
         const totalAmountWithCommission = parseFloat(
             (totalAmount - totalAmount * 0.025).toFixed(2)
