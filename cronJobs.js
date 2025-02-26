@@ -64,12 +64,15 @@ async function deletePastEvents() {
                 // Remove event references from User collection
                 await User.updateMany({ eventId: event._id }, { $pull: { eventId: event._id } });
 
-                const adminNoti = await AdminNotification.findById(event.eventDetails.toString());
-
-                if (adminNoti) {
-                    await AdminNotification.findByIdAndDelete(adminNoti._id);
+                if (event.eventDetails?.$oid) {
+                    const adminNoti = await AdminNotification.findById(event.eventDetails.$oid);
+                    if (adminNoti) {
+                        await AdminNotification.findByIdAndDelete(adminNoti._id);
+                    }
+                } else {
+                    console.warn(`Skipping event ${event._id}: eventDetails is missing or malformed`, event.eventDetails);
                 }
-
+                
                 const deletedEvent = await Event.findByIdAndDelete(event._id);
 
                 if (deletedEvent) {
