@@ -70,7 +70,9 @@ async function createBooking(req, res) {
             return res.status(403).json({ error: 'Event is pending and not live for users.' });
         }
 
-        const totalAmountWithCommission = totalAmount - totalAmount * 0.025;
+        const totalAmountWithCommission = parseFloat(
+            (totalAmount - totalAmount * 0.025).toFixed(2)
+        );
         // Atomically update event capacity and total amount
         const updatedEvent = await Event.findOneAndUpdate(
             { _id: eventId, eventCapacity: { $gte: totalPeople } }, // Ensure enough capacity
@@ -174,7 +176,9 @@ async function createBookingWithWallet(req, res) {
             return res.status(400).json({ message: "Insufficient wallet balance for the booking" });
         }
 
-        const totalAmountWithCommission = totalAmount - totalAmount * 0.025;
+        const totalAmountWithCommission = parseFloat(
+            (totalAmount - totalAmount * 0.025).toFixed(2)
+        );
         // Atomically update event capacity and total amount
         const updatedEvent = await Event.findOneAndUpdate(
             { _id: eventId, eventCapacity: { $gte: totalPeople } },
@@ -471,8 +475,8 @@ async function updateBooking(req, res) {
                 }
 
                 // Process the refund
-                const refundAmount = booking.totalAmount * 0.95; //95% Refund, 2.5 for Org and 2.5 for Admin
-                const deductAmount = booking.totalAmount * 0.95;
+                const refundAmount = booking.totalAmount / 1.025; //95% Refund, 2.5 for Org and 2.5 for Admin
+                const deductAmount = booking.totalAmount  / 1.025;
                 wallet.balance += refundAmount;
                 event.totalAmount -= deductAmount;
 
