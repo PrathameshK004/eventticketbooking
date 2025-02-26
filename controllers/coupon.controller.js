@@ -20,10 +20,9 @@ async function getAllCoupons(req, res) {
 
 async function checkCoupon(req, res) {
     try {
-        const { couponId } = req.params;
-        const { eventId } = req.params;
+        const { code, eventId } = req.params;
+        const coupon = await Coupon.findOne({ code });
 
-        const coupon = await Coupon.findById(couponId);
         if (!coupon) {
             return res.status(404).json({ error: "Coupon not found." });
         }

@@ -7,7 +7,7 @@ let verifyToken = require('../interceptor/auth.interceptor');
 const router = express.Router();
 
 router.get("/getAllCoupons", verifyToken, adminNotificationInterceptor.validateAdmin, couponController.getAllCoupons);
-router.get("/checkCoupon/:eventId/:couponId", verifyToken, eventInterceptor.validateEventId, couponInterceptor.validateCouponId, couponController.checkCoupon );
+router.get("/checkCoupon/:eventId/:code", verifyToken, eventInterceptor.validateEventId, couponInterceptor.validateCouponCode, couponController.checkCoupon );
 router.post("/addCoupon", verifyToken, adminNotificationInterceptor.validateAdmin,  couponInterceptor.validateCouponDetails, couponController.createCoupon);
 router.put("/updateCoupon/:couponId", verifyToken, adminNotificationInterceptor.validateAdmin, couponInterceptor.validateCouponId,  couponInterceptor.validateCouponDetails, couponController.updateCoupon);
 router.delete("/deleteCoupon/:couponId", verifyToken, adminNotificationInterceptor.validateAdmin, couponInterceptor.validateCouponId, couponController.deleteCoupon);

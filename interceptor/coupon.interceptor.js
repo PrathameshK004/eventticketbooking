@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 
 module.exports = {
     validateCouponId,
+    validateCouponCode,
     validateCouponDetails
 };
 
@@ -26,6 +27,24 @@ async function validateCouponId(req, res, next) {
 
     next();
 };
+
+async function validateCouponCode(req, res, next) {
+    const { code } = req.params;
+
+    if (!code) {
+        return res.status(400).json({ error: "Coupon code is required." });
+    }
+
+    const codeRegex = /^[A-Z0-9]+$/;
+    if (!codeRegex.test(code.trim())) {
+        return res.status(400).json({ 
+            error: "Invalid coupon code format. Use only uppercase letters (A-Z) and numbers (0-9)." 
+        });
+    }
+
+    next();
+};
+
 
 async function validateCouponDetails(req, res, next) {
     const { code, discountPercentage, noOfUses, expirationDate, status, eventId } = req.body;
