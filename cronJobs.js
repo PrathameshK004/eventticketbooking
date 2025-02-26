@@ -78,7 +78,7 @@ async function deletePastEvents() {
                 const deletedEvent = await Event.findByIdAndDelete(event._id);
 
                 if (deletedEvent) {
-                    console.log(`Successfully deleted event: ${event._id}`);
+                    console.log(`Deleted event: ${event._id}`);
                 } else {
                     console.error(`Failed to delete event: ${event._id} (Not found)`);
                 }
