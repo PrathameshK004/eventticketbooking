@@ -3,8 +3,8 @@ const mongoose = require('mongoose');
 const { GridFSBucket } = require('mongodb');
 const moment = require('moment');
 const ObjectId = require('mongoose').Types.ObjectId;
-
-const Event = require('./modules/event.module.js'); // Event with startTime
+const AdminNotification = require('./modules/adminNotification.module.js'); // 10 days old
+const Event = require('./modules/event.module.js'); // isLive to false with startTime and delete 1 month
 const User = require('./modules/user.module.js');
 const Enquiry = require('./modules/enquiry.module.js'); // 1 month old
 const Notification = require('./modules/notification.module.js'); // 10 days old
@@ -29,7 +29,7 @@ async function deleteExpiredTokens() {
     }
 }
 
-// Function to delete past events
+
 async function deletePastEvents() {
     try {
         const pastEvents = await Event.find(); // Fetch all events
@@ -42,12 +42,20 @@ async function deletePastEvents() {
             // Extract the start time (first part before "-")
             const startTimeStr = event.eventTime.split('-')[0].trim(); // "HH:MM AM/PM"
 
-            // Convert eventDate (ISO format) + startTime into a full DateTime object
+            // Convert eventDate + startTime into a full DateTime object
             const eventDateTime = moment(event.eventDate).format('YYYY-MM-DD') + ' ' + startTimeStr;
             const eventFullDateTime = moment(eventDateTime, 'YYYY-MM-DD hh:mm A').toDate();
 
-            // Check if event is in the past
-            if (eventFullDateTime < now) {
+            if (event.isLive && eventFullDateTime <= now) {
+                await Event.updateOne({ _id: event._id }, { $set: { isLive: false } });
+                console.log(`Marked event ${event._id} as not live`);
+            }
+
+            // Add 30 days (1 month) to the event date
+            const deletionThreshold = moment(eventFullDateTime).add(30, 'days').toDate();
+
+            // Check if the event is now older than 30 days
+            if (deletionThreshold < now) {
                 // Delete associated files from the "uploads" bucket
                 if (event.fileId) {
                     await eventBucket.delete(new ObjectId(event.fileId));
@@ -56,10 +64,20 @@ async function deletePastEvents() {
                 // Remove event references from User collection
                 await User.updateMany({ eventId: event._id }, { $pull: { eventId: event._id } });
 
-                // Delete the event itself
-                await Event.deleteOne({ _id: event._id });
+                const adminNoti = await AdminNotification.findById(event.eventDetails.toString());
 
-                console.log(`Deleted event: ${event._id}`);
+                if (adminNoti) {
+                    await AdminNotification.findByIdAndDelete(adminNoti._id);
+                }
+
+                const deletedEvent = await Event.findByIdAndDelete(event._id);
+
+                if (deletedEvent) {
+                    console.log(`Successfully deleted event: ${event._id}`);
+                } else {
+                    console.error(`Failed to delete event: ${event._id} (Not found)`);
+                }
+
             }
         }
 
@@ -67,6 +85,7 @@ async function deletePastEvents() {
         console.error('Error deleting past events:', err);
     }
 }
+
 
 
 // Function to delete old enquiries (older than 1 month)

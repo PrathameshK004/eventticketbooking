@@ -331,7 +331,7 @@ async function sendReport(req, res) {
                             </tr>
                             <tr>
                                 <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Total Revenue:</strong></td>
-                                <td style="padding: 8px; border-bottom: 1px solid #ddd;">Rs. ${event.totalAmount}</td>
+                                <td style="padding: 8px; border-bottom: 1px solid #ddd;">Rs. ${event.totalAmount ?? 0}</td>
                             </tr>
                         </table>
         

@@ -36,7 +36,7 @@ module.exports = {
 
 // Get all events
 function getAllEvents(req, res) {
-    Event.find({ isTemp: false })
+    Event.find({ isTemp: false, isLive: true })
         .then(events => {
             const updatedEvents = events.map(event => {
                 const approveDate = event.approveDate ? moment(event.approveDate) : null;
@@ -63,7 +63,7 @@ async function getAllEventsByFilter(req, res) {
 
         const eventTypes = type.split(",").map(t => t.trim());
 
-        const events = await Event.find({ eventType: { $in: eventTypes }, isTemp: false });
+        const events = await Event.find({ eventType: { $in: eventTypes }, isTemp: false, isLive: true });
 
         // If no events found, return 404
         if (events.length === 0) {
@@ -344,6 +344,7 @@ function getEventsOfOrg(req, res) {
                     newEvent.fileId = fileId;
                     newEvent.imageUrl = imageUrl;
                     newEvent.isTemp = false;
+                    newEvent.isLive = true;
                     const savedEvent = await newEvent.save();
 
                     await User.findByIdAndUpdate(

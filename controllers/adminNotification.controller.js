@@ -102,6 +102,7 @@ async function updateAdminNotification(req, res) {
                 }
                 await notificationController.sendNotification("event", `${event.eventTitle} is Accepted`, `Your event ${event.eventTitle} is live.`, event.userId)
                 event.isTemp=false;
+                event.isLive=true;
                 event.approveDate = Date.now();
                 await event.save();
             }
