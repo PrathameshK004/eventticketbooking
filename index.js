@@ -40,7 +40,7 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['PUT', 'GET', 'POST', 'DELETE'],
+  methods: ['PUT', 'GET', 'POST', 'DELETE', 'PATCH'],
   allowedHeaders: ['X-Requested-With', 'Content-Type', 'Origin', 'Accept', 'Authorization'],
   exposedHeaders: ['Authorization'],
   credentials: true // This allows credentials to be included
