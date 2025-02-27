@@ -9,7 +9,7 @@ const router = express.Router();
 router.get("/getAllCoupons", verifyToken, adminNotificationInterceptor.validateAdmin, couponController.getAllCoupons);
 router.get("/checkCoupon/:eventId/:code", verifyToken, eventInterceptor.validateEventId, couponInterceptor.validateCouponCode, couponController.checkCoupon );
 router.post("/addCoupon", verifyToken, adminNotificationInterceptor.validateAdmin,  couponInterceptor.validateCouponDetails, couponController.createCoupon);
-router.put("/updateCoupon/:couponId", verifyToken, adminNotificationInterceptor.validateAdmin, couponInterceptor.validateCouponId,  couponInterceptor.validateCouponDetails, couponController.updateCoupon);
+router.put("/updateCoupon/:couponId", verifyToken, adminNotificationInterceptor.validateAdmin, couponInterceptor.validateCouponId,  couponInterceptor.validateUpdateCouponDetails, couponController.updateCoupon);
 router.delete("/deleteCoupon/:couponId", verifyToken, adminNotificationInterceptor.validateAdmin, couponInterceptor.validateCouponId, couponController.deleteCoupon);
 
 module.exports = router;
