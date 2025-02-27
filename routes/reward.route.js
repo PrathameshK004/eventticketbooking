@@ -9,6 +9,7 @@ router.get("/getRewards/:userId", verifyToken, userInterceptor.validateUserId, r
 router.get("/redeemReward/:rewardId", verifyToken, rewardInterceptor.validateRewardId, rewardController.redeemReward );
 router.get("/redeemAllRewards/:userId", verifyToken, userInterceptor.validateUserId, rewardController.redeemAllRewards);
 router.get("/getRewardCount/:userId", verifyToken, userInterceptor.validateUserId, rewardController.getRewardsCount );
+router.patch("/updateReward/:rewardId", verifyToken, rewardInterceptor.validateRewardId, rewardController.updateReward );
 
 module.exports = router;
 

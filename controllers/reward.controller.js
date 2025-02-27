@@ -11,8 +11,35 @@ module.exports = {
     redeemReward,
     redeemAllRewards,
     getRewardsCount,
-    generateRewardIfEligible
+    generateRewardIfEligible,
+    updateReward
 };
+
+async function updateReward(req, res) {
+    try {
+        const { rewardId } = req.params;
+        const { isRevealed } = req.body;
+
+        // Validate if the reward exists
+        const reward = await Reward.findById(rewardId);
+        if (!reward) {
+            return res.status(404).json({ message: "Reward not found" });
+        }
+
+        // Update only if isRevealed is provided
+        if (isRevealed !== undefined) {
+            reward.isRevealed = isRevealed;
+        }
+
+        await reward.save();
+        res.status(200).json({ message: "Reward updated successfully", reward });
+
+    } catch (error) {
+        res.status(500).json({ message: "Internal server error", error: error.message });
+    }
+}
+
+
 
 async function generateRewardIfEligible(userId) {
     const session = await mongoose.startSession();
