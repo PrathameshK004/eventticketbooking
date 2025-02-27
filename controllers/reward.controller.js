@@ -44,7 +44,7 @@ async function generateRewardIfEligible(userId) {
             bookingDate: { $gte: fifteenDaysAgo }
         }).session(session);
 
-        if (bookingCount < 15) {
+        if (bookingCount < 5) {
             await session.abortTransaction();
             session.endSession();
             return { success: false, message: 'Not enough bookings for a reward' };
