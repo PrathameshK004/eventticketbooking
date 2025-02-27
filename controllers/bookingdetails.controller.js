@@ -8,6 +8,7 @@ const mongoose = require('mongoose');
 const Wallet = require('../modules/wallet.module.js');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
+const { generateRewardIfEligible } = require('./reward.controller');;
 let notificationController = require('./notification.controller');
 
 module.exports = {
@@ -167,7 +168,13 @@ async function createBooking(req, res) {
             console.error("Failed to create notification:", err);
         }
 
-        res.status(201).json(newBooking);
+        const rewardResult = await generateRewardIfEligible(userId);
+
+        res.status(201).json({
+            message: 'Booking successful',
+            booking: newBooking,
+            reward: rewardResult.success ? rewardResult.reward : rewardResult.message
+        });
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
@@ -321,7 +328,13 @@ async function createBookingWithWallet(req, res) {
             console.error("Failed to create notification:", err);
         }
 
-        res.status(201).json(newBooking);
+        const rewardResult = await generateRewardIfEligible(userId);
+
+        res.status(201).json({
+            message: 'Booking successful',
+            booking: newBooking,
+            reward: rewardResult.success ? rewardResult.reward : rewardResult.message
+        });
     } catch (error) {
         await session.abortTransaction();
         session.endSession();

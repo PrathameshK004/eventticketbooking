@@ -7,6 +7,7 @@ const notificationRoutes = require("./notification.route");
 const adminNotificationRoutes = require("./adminNotification.route");
 const enquiryRoutes = require("./enquiry.route");
 const couponsRoutes = require("./coupon.route");
+const rewardsRoutes = require("./reward.route");
 const reportRoutes = require("./orgReport.route");
 const router = express.Router();
 
@@ -19,6 +20,7 @@ router.use('/bookingdetails',bookingDetailsRoutes);
 router.use('/wallet',walletRoutes);
 router.use('/enquiry',enquiryRoutes);
 router.use('/coupons',couponsRoutes);
+router.use('/rewards',rewardsRoutes);
 router.use('/reports',reportRoutes);
 
 module.exports=router;
