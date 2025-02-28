@@ -70,7 +70,7 @@ async function generateRewardIfEligible(userId) {
             bookingDate: { $gte: fifteenDaysAgo }
         }).session(session);
 
-        if (bookingCount < 5) {
+        if (bookingCount < 2) {
             await session.abortTransaction();
             session.endSession();
             return { success: false, message: 'Not enough bookings for a reward' };
@@ -134,7 +134,7 @@ async function redeemAllRewards(req, res) {
         const currentDate = new Date();
 
         // Find all unredeemed rewards
-        const rewards = await Reward.find({ userId, isRevealed: false }).session(session);
+        const rewards = await Reward.find({ userId, isRedeemed: false }).session(session);
 
         if (!rewards.length) {
             await session.abortTransaction();
@@ -211,7 +211,7 @@ async function redeemAllRewards(req, res) {
         // Mark valid rewards as redeemed
         await Reward.updateMany(
             { _id: { $in: validRewards.map(r => r._id) } },
-            { $set: { isRevealed: true, isRedeemed: true } }, // Updating both fields
+            { $set: { isRedeemed: true } }, // Updating both fields
             { session }
         );
         
