@@ -77,7 +77,7 @@ async function generateRewardIfEligible(userId) {
         }
 
         // Determine reward type (win or lose)
-        const isWin = Math.random() > 0.5; // 50% chance to win
+        const isWin = Math.random() > 0.8; // 20% chance to win
         const rewardType = isWin ? 'win' : 'lose';
         const rewardAmount = isWin ? Math.floor(Math.random() * 20) + 1 : 0; // Random amount 1-20 if win, else 0
 

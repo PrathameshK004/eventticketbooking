@@ -53,7 +53,7 @@ async function createBooking(req, res) {
     session.startTransaction();
 
     try {
-        const { userId, eventId, noOfPeoples, totalAmount, isCoupon, couponCode } = req.body;
+        const { userId, eventId, noOfPeoples, totalAmount, withAdminAmount, isCoupon, couponCode } = req.body;
 
         // Calculate the total number of people
         const totalPeople = Array.isArray(noOfPeoples) ? noOfPeoples.reduce((sum, num) => sum + num, 0) : 0;
@@ -121,11 +121,11 @@ async function createBooking(req, res) {
         }
 
         // Create booking inside the transaction
-        const newBooking = new Booking({ ...req.body });
-        await newBooking.save({ session });
+        const { withAdminAmount: _, ...bookingData } = req.body;
+        const newBooking = new Booking({ ...bookingData, totalAmount: withAdminAmount });
 
         // Credit 2.5% fee to Admin Wallet
-        const adminFee = newBooking.totalAmount * 0.025; // 2.5% for Admin
+        const adminFee = withAdminAmount - newBooking.totalAmount; // 2.5% for Admin
         const adminWalletId = process.env.ADMIN_WALLET_ID;
         let adminWallet = await Wallet.findById(adminWalletId).session(session);
 
@@ -170,6 +170,19 @@ async function createBooking(req, res) {
 
         const rewardResult = await generateRewardIfEligible(userId);
 
+        if (rewardResult.success) {
+            try {
+                await notificationController.sendNotification(
+                    "reward",
+                    "Reward Earned",
+                    `You've earned a reward for your booking. Check your rewards section for details!`,
+                    userId
+                );
+            } catch (err) {
+                console.error("Failed to create notification:", err);
+            }
+        }
+
         res.status(201).json({
             message: 'Booking successful',
             booking: newBooking,
@@ -196,7 +209,7 @@ async function createBookingWithWallet(req, res) {
     session.startTransaction();
 
     try {
-        const { userId, eventId, noOfPeoples, totalAmount, isCoupon, couponCode } = req.body;
+        const { userId, eventId, noOfPeoples, totalAmount, withAdminAmount, isCoupon, couponCode } = req.body;
 
         // Calculate the total number of people
         const totalPeople = Array.isArray(noOfPeoples) ? noOfPeoples.reduce((sum, num) => sum + num, 0) : 0;
@@ -247,9 +260,7 @@ async function createBookingWithWallet(req, res) {
         }
 
 
-        const totalAmountWithCommission = parseFloat(
-            (totalAmount - totalAmount * 0.025).toFixed(2)
-        );
+        const totalAmountWithCommission = totalAmount;
         // Atomically update event capacity and total amount
         const updatedEvent = await Event.findOneAndUpdate(
             { _id: eventId, eventCapacity: { $gte: totalPeople } },
@@ -264,15 +275,15 @@ async function createBookingWithWallet(req, res) {
         }
 
         // Create booking within transaction
-        const newBooking = new Booking({ ...req.body });
-        await newBooking.save({ session });
+        const { withAdminAmount: _, ...bookingData } = req.body;
+        const newBooking = new Booking({ ...bookingData, totalAmount: withAdminAmount });
 
         // Deduct wallet balance and record transaction atomically
         const updatedWallet = await Wallet.findOneAndUpdate(
-            { userId, balance: { $gte: totalAmount } },
+            { userId, balance: { $gte: withAdminAmount } },
             {
-                $inc: { balance: -totalAmount },
-                $push: { transactions: { amount: totalAmount, type: 'Debit', description: `Booking payment for event: ${updatedEvent.eventTitle}` } }
+                $inc: { balance: -withAdminAmount },
+                $push: { transactions: { amount: withAdminAmount, type: 'Debit', description: `Booking payment for event: ${updatedEvent.eventTitle}` } }
             },
             { new: true, session }
         );
@@ -284,7 +295,7 @@ async function createBookingWithWallet(req, res) {
         }
 
         // Credit 2.5% fee to Admin Wallet
-        const adminFee = newBooking.totalAmount * 0.025; // 2.5% for Admin
+        const adminFee = withAdminAmount - newBooking.totalAmount;
         const adminWalletId = process.env.ADMIN_WALLET_ID;
         let adminWallet = await Wallet.findById(adminWalletId).session(session);
 
@@ -302,7 +313,7 @@ async function createBookingWithWallet(req, res) {
         });
 
         await adminWallet.save({ session });
-        
+
         // Commit transaction
         await session.commitTransaction();
         session.endSession();
@@ -330,7 +341,7 @@ async function createBookingWithWallet(req, res) {
 
         const rewardResult = await generateRewardIfEligible(userId);
 
-        if(rewardResult.success){
+        if (rewardResult.success) {
             try {
                 await notificationController.sendNotification(
                     "reward",
@@ -565,10 +576,10 @@ async function updateBooking(req, res) {
                 }
 
                 // Process the refund
-                const refundAmount = booking.totalAmount / 1.05; //95% Refund, 2.5 for Org and 2.5 for Admin
-                const deductAmount = booking.totalAmount  / 1.05;
-                wallet.balance += refundAmount;
-                event.totalAmount -= deductAmount;
+                const refundAmount = booking.totalAmount / 1.025; //97.5% Refund, 2.5 for Org and 2.5 for Admin
+                const deductAmount = booking.totalAmount / 1.025;
+                wallet.balance += refundAmount.toFixed(2);
+                event.totalAmount -= deductAmount.toFixed(2);
 
                 // Record transaction in wallet
                 wallet.transactions.push({
@@ -577,10 +588,10 @@ async function updateBooking(req, res) {
                     description: `Refund for cancelled transaction ID: ${booking.transactionId}`
                 });
 
-                
+
                 await wallet.save({ session });
                 await event.save({ session });
-                
+
                 // Update payment status
                 booking.pay_status = 'Amount Refunded to Wallet';
             }

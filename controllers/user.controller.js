@@ -675,7 +675,7 @@ async function getHoldBalance(req, res) {
             return res.status(404).json({ error: 'No events found for the given User ID.' });
         }
 
-        const totalHoldBalance = events.reduce((sum, event) => sum + (event.totalAmount || 0), 0);
+        const totalHoldBalance = events.reduce((sum, event) => sum + (event.totalAmount || 0), 0).toFixed(2);
 
         res.status(200).json({ holdBalance: totalHoldBalance });
     } catch (error) {

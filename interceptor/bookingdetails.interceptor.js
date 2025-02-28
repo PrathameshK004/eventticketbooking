@@ -58,12 +58,13 @@ async function validateNewBooking(req, res, next) {
         eventDate, 
         totalAmount, 
         pay_status, 
-        book_status 
+        book_status,
+        withAdminAmount 
     } = req.body;
 
     // Check for required fields
-    if (!userId || !eventId || !totalAmount || !pay_status) {
-        return res.status(400).json({ error: 'User ID, Event ID, Total amount, Payment status, and Booking status are required fields.' });
+    if (!userId || !eventId || !totalAmount || !pay_status || !withAdminAmount) {
+        return res.status(400).json({ error: 'User ID, Event ID, Total amount, AdminAmount, Payment status, and Booking status are required fields.' });
     }
     
     // Validate UUID for userId
@@ -83,6 +84,10 @@ async function validateNewBooking(req, res, next) {
     // Validate totalAmount
     if (typeof totalAmount !== 'number' || totalAmount < 0) {
         return res.status(400).json({ error: 'Total amount must be a non-negative number.' });
+    }
+
+    if (typeof withAdminAmount !== 'number' || withAdminAmount < totalAmount) {
+        return res.status(400).json({ error: 'Admin amount must be a greater than total Amount.' });
     }
 
     // Validate pay_status
