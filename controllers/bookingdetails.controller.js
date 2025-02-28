@@ -121,9 +121,10 @@ async function createBooking(req, res) {
         // Create booking inside the transaction
         const { withAdminAmount: _, ...bookingData } = req.body;
         const newBooking = new Booking({ ...bookingData, totalAmount: withAdminAmount });
+        await newBooking.save({ session });
 
         // Credit 2.5% fee to Admin Wallet
-        const adminFee = withAdminAmount - newBooking.totalAmount; // 2.5% for Admin
+        const adminFee = withAdminAmount - totalAmount; // 2.5% for Admin
         const adminWalletId = process.env.ADMIN_WALLET_ID;
         let adminWallet = await Wallet.findById(adminWalletId).session(session);
 
@@ -275,7 +276,8 @@ async function createBookingWithWallet(req, res) {
         // Create booking within transaction
         const { withAdminAmount: _, ...bookingData } = req.body;
         const newBooking = new Booking({ ...bookingData, totalAmount: withAdminAmount });
-
+        await newBooking.save({ session });
+        
         // Deduct wallet balance and record transaction atomically
         const updatedWallet = await Wallet.findOneAndUpdate(
             { userId, balance: { $gte: withAdminAmount } },
@@ -293,7 +295,7 @@ async function createBookingWithWallet(req, res) {
         }
 
         // Credit 2.5% fee to Admin Wallet
-        const adminFee = withAdminAmount - newBooking.totalAmount;
+        const adminFee = withAdminAmount - totalAmount;
         const adminWalletId = process.env.ADMIN_WALLET_ID;
         let adminWallet = await Wallet.findById(adminWalletId).session(session);
 
