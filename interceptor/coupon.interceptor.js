@@ -59,6 +59,10 @@ async function validateCouponDetails(req, res, next) {
         return res.status(400).json({ error: "Coupon code must contain only uppercase letters and numbers." });
     }
 
+    if (code.length > 10) {
+        return res.status(400).json({ error: "Coupon code should not be more than 10 characters." });
+    }
+
     const existingCoupon = await Coupon.findOne({ code });
     if (existingCoupon) {
         return res.status(400).json({ error: "Coupon code already exists." });
@@ -117,6 +121,10 @@ async function validateUpdateCouponDetails(req, res, next) {
     const allowedStatuses = ["Active", "Inactive"];
     if (status && !allowedStatuses.includes(status)) {
         return res.status(400).json({ error: "Invalid status. Allowed values: 'Active' or 'Inactive'." });
+    }
+
+    if (code.length > 10) {
+        return res.status(400).json({ error: "Coupon code should not be more than 10 characters." });
     }
 
     const event = await Event.findById(eventId);

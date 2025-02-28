@@ -28,7 +28,7 @@ async function generateReport(eventId) {
     profit = profit - (profit*0.025);
     const cancellationProfit = event.totalAmount - profit;
     const totalProfit = event.totalAmount;
-    const cancellationRate = totalBookings > 0 ? ((cancelledBookings / totalBookings) * 100).toFixed(2) : 0;
+    const cancellationRate = totalBookings > 0 ? ((cancelledBookings / totalBookings) * 100).toFixed(4) : 0;
 
     // Create PDF
     const doc = new PDFDocument({ margin: 50 });
@@ -96,7 +96,7 @@ async function generateReport(eventId) {
             "Total Profit"
         ],
         rows: [
-            [availableCapacity, totalCapacity, totalBookings, successfulBookings, cancelledBookings, `${cancellationRate}%`, `Rs. ${cancellationProfit.toFixed(2)}`, `Rs. ${profit.toFixed(2)}`, `Rs. ${totalProfit.toFixed(2)}`]
+            [availableCapacity, totalCapacity, totalBookings, successfulBookings, cancelledBookings, `${cancellationRate}%`, `Rs. ${cancellationProfit.toFixed(4)}`, `Rs. ${profit.toFixed(4)}`, `Rs. ${totalProfit.toFixed(4)}`]
         ],
     };
 
@@ -221,7 +221,7 @@ async function generateReport(eventId) {
                 { label: "Child", count: b.noOfPeoples[2] }
             ].filter(t => t.count > 0); // Remove types with count 0
     
-            const cancellationCharges = b.book_status === "Cancelled" ? `Rs. ${(b.totalAmount * 0.025).toFixed(2)}` : "-";
+            const cancellationCharges = b.book_status === "Cancelled" ? `Rs. ${(b.totalAmount * 0.025).toFixed(4)}` : "-";
 
             return [
                 i + 1,  // Sr. No.

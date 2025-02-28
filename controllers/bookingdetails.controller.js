@@ -161,7 +161,7 @@ async function createBooking(req, res) {
             await notificationController.sendNotification(
                 "bookings",
                 "Booking Confirmed",
-                `Your booking for "${updatedEvent.eventTitle}" has been confirmed.''}`,
+                `Your booking for "${updatedEvent.eventTitle}" has been confirmed.`,
                 userId
             );
         } catch (err) {
@@ -329,6 +329,19 @@ async function createBookingWithWallet(req, res) {
         }
 
         const rewardResult = await generateRewardIfEligible(userId);
+
+        if(rewardResult.success){
+            try {
+                await notificationController.sendNotification(
+                    "reward",
+                    "Reward Earned",
+                    `You've earned a reward for your booking. Check your rewards section for details!`,
+                    userId
+                );
+            } catch (err) {
+                console.error("Failed to create notification:", err);
+            }
+        }
 
         res.status(201).json({
             message: 'Booking successful',

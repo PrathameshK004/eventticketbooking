@@ -10,6 +10,7 @@ const Enquiry = require('./modules/enquiry.module.js'); // 1 month old
 const Notification = require('./modules/notification.module.js'); // 10 days old
 const Token = require('./modules/token.module.js'); // If expired
 const Coupon = require('./modules/coupon.module.js'); // If expired
+const Reward = require('./modules/reward.module.js'); // If expired
 
 // Initialize GridFSBuckets for different collections
 let eventBucket, enquiryBucket;
@@ -39,6 +40,17 @@ async function deleteExpiredCoupons() {
         console.error('Error deleting expired coupons:', err);
     }
 }
+
+// Function to delete expired coupons
+async function deleteExpiredRewards() {
+    try {
+        const result = await Reward.deleteMany({ expiresAt: { $lt: new Date() } });
+        console.log(`Deleted expired rewards: ${result.deletedCount}`);
+    } catch (err) {
+        console.error('Error deleting expired rewards:', err);
+    }
+}
+
 
 async function deletePastEvents() {
     try {
@@ -146,6 +158,7 @@ async function scheduleDataDeletion() {
     await deleteOldEnquiries();
     await deleteOldNotifications();
     await deleteExpiredCoupons();
+    await deleteExpiredRewards();
 }
 
 // Run cleanup function every minute

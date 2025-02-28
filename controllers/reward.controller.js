@@ -8,7 +8,6 @@ const mongoose = require('mongoose');
 
 module.exports = {
     getAllUserRewards,
-    redeemReward,
     redeemAllRewards,
     getRewardsCount,
     generateRewardIfEligible,
@@ -92,7 +91,8 @@ async function generateRewardIfEligible(userId) {
             amount: rewardAmount,
             type: rewardType,
             expiresAt: expirationDate,
-            isRevealed: false
+            isRevealed: false,
+            isRedeemed: false
         });
 
         await newReward.save({ session });
@@ -123,109 +123,6 @@ async function getAllUserRewards(req, res) {
         res.status(500).json({ message: 'Error fetching rewards', error });
     }
 }
-
-async function redeemReward(req, res) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-        const rewardId = req.params.rewardId;
-        const adminWalletId = process.env.ADMIN_WALLET_ID;
-        const currentDate = new Date();
-
-        // Find reward
-        const reward = await Reward.findOne({ _id: rewardId }).session(session);
-
-        if (!reward) {
-            await session.abortTransaction();
-            session.endSession();
-            return res.status(404).json({ message: 'Reward not found' });
-        }
-
-        // Check if the reward is expired
-        if (reward.expiresAt && reward.expiresAt < currentDate) {
-            await session.abortTransaction();
-            session.endSession();
-            return res.status(400).json({ message: 'Reward has expired and cannot be redeemed' });
-        }
-
-        if (reward.isRevealed && !reward.isScratching) {
-            await session.abortTransaction();
-            session.endSession();
-            return res.status(400).json({ message: 'Reward already redeemed or not scratched' });
-        }
-
-        // Find admin wallet
-        let adminWallet = await Wallet.findById(adminWalletId).session(session);
-        if (!adminWallet) {
-            await session.abortTransaction();
-            session.endSession();
-            return res.status(500).json({ message: 'Admin wallet not found' });
-        }
-
-        // Ensure admin wallet has enough balance
-        if (adminWallet.balance < reward.amount) {
-            await session.abortTransaction();
-            session.endSession();
-            return res.status(400).json({ message: 'Insufficient balance in admin wallet' });
-        }
-
-        // Find user and user wallet
-        let user = await User.findById(reward.userId).session(session);
-        let userWallet = await Wallet.findOne({ userId: reward.userId }).session(session);
-
-        if (!user || !userWallet) {
-            await session.abortTransaction();
-            session.endSession();
-            return res.status(404).json({ message: 'User or wallet not found' });
-        }
-
-        // Deduct from admin wallet
-        adminWallet.balance -= reward.amount;
-        adminWallet.transactions.push({
-            amount: reward.amount,
-            type: 'Debit',
-            description: `Reward Redeemed by ${user.userName} - Rs.${reward.amount}`
-        });
-
-        await adminWallet.save({ session });
-
-        // Credit to user wallet
-        userWallet.balance += reward.amount;
-        userWallet.transactions.push({
-            amount: reward.amount,
-            type: 'Credit',
-            description: `Reward Redeemed - Rs.${reward.amount}`
-        });
-
-        await userWallet.save({ session });
-
-        // Mark reward as claimed
-        reward.isRevealed = true;
-        await reward.save({ session });
-
-        // Commit transaction
-        await session.commitTransaction();
-        session.endSession();
-
-        // Send notification outside transaction
-        await notificationController.sendNotification(
-            'reward',
-            'Reward Redeemed',
-            `You have successfully redeemed Rs.${reward.amount} in your Wallet.`,
-            reward.userId
-        );
-
-        res.status(200).json({ message: 'Reward redeemed successfully', reward });
-
-    } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
-        res.status(500).json({ message: 'Error redeeming reward', error: error.message });
-    }
-}
-
-
 
 async function redeemAllRewards(req, res) {
     const session = await mongoose.startSession();
@@ -314,9 +211,10 @@ async function redeemAllRewards(req, res) {
         // Mark valid rewards as redeemed
         await Reward.updateMany(
             { _id: { $in: validRewards.map(r => r._id) } },
-            { $set: { isRevealed: true } },
+            { $set: { isRevealed: true, isRedeemed: true } }, // Updating both fields
             { session }
         );
+        
 
         // Commit transaction
         await session.commitTransaction();

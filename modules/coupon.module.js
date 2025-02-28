@@ -6,7 +6,8 @@ const couponSchema = new mongoose.Schema({
         required: true, 
         unique: true,
         uppercase: true, 
-        match: [/^[A-Z0-9]+$/, 'Coupon code must contain only uppercase letters and numbers'] 
+        match: [/^[A-Z0-9]+$/, 'Coupon code must contain only uppercase letters and numbers'],
+        maxlength: 10 
     },
   discountPercentage: { type: Number, required: true },
   noOfUses: { type: Number, required: true },
