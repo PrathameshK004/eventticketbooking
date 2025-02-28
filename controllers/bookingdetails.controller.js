@@ -103,9 +103,7 @@ async function createBooking(req, res) {
             await coupon.save({ session });
         }
 
-        const totalAmountWithCommission = parseFloat(
-            (req.body.totalAmount - req.body.totalAmount * 0.025).toFixed(2)
-        );
+        const totalAmountWithCommission = req.body.totalAmount;
 
         // Atomically update event capacity and total amount
         const updatedEvent = await Event.findOneAndUpdate(
