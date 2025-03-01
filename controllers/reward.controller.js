@@ -10,8 +10,9 @@ module.exports = {
     getAllUserRewards,
     redeemAllRewards,
     getRewardsCount,
-    generateRewardIfEligible,
-    updateReward
+    generateRewardIfEliggible,
+    updateReward,
+    checkRewardsToRedeem
 };
 
 async function updateReward(req, res) {
@@ -92,7 +93,7 @@ async function generateRewardIfEligible(userId) {
             type: rewardType,
             expiresAt: expirationDate,
             isRevealed: false,
-            isRedeemed: false
+            isRedeemed: rewardType === 'lose'
         });
 
         await newReward.save({ session });
@@ -115,7 +116,7 @@ async function generateRewardIfEligible(userId) {
 
 async function getAllUserRewards(req, res) {
     try {
-        const userId = req.params.userId; 
+        const userId = req.params.userId;
         const rewards = await Reward.find({ userId }).sort({ issuedAt: -1 });
 
         res.status(200).json(rewards);
@@ -149,8 +150,8 @@ async function redeemAllRewards(req, res) {
         if (!validRewards.length) {
             await session.abortTransaction();
             session.endSession();
-            return res.status(400).json({ 
-                message: 'All pending rewards have expired', 
+            return res.status(400).json({
+                message: 'All pending rewards have expired',
                 expiredRewards: expiredRewards.map(r => ({ id: r._id, amount: r.amount, expiresAt: r.expiresAt }))
             });
         }
@@ -188,33 +189,34 @@ async function redeemAllRewards(req, res) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Deduct from admin wallet
-        adminWallet.balance -= totalAmount;
-        adminWallet.transactions.push({
-            amount: totalAmount,
-            type: 'Debit',
-            description: `Reward Redeemed by ${user.userName} - Rs.${totalAmount}`
-        });
+        if (totalAmount > 0) {
+            // Deduct from admin wallet
+            adminWallet.balance -= totalAmount;
+            adminWallet.transactions.push({
+                amount: totalAmount,
+                type: 'Debit',
+                description: `Reward Redeemed by ${user.userName} - Rs.${totalAmount}`
+            });
 
-        await adminWallet.save({ session });
+            await adminWallet.save({ session });
 
-        // Credit user wallet
-        userWallet.balance += totalAmount;
-        userWallet.transactions.push({
-            amount: totalAmount,
-            type: 'Credit',
-            description: `All Rewards Redeemed - Rs.${totalAmount}`
-        });
+            // Credit user wallet
+            userWallet.balance += totalAmount;
+            userWallet.transactions.push({
+                amount: totalAmount,
+                type: 'Credit',
+                description: `All Rewards Redeemed - Rs.${totalAmount}`
+            });
 
-        await userWallet.save({ session });
-
+            await userWallet.save({ session });
+        }
         // Mark valid rewards as redeemed
         await Reward.updateMany(
             { _id: { $in: validRewards.map(r => r._id) } },
             { $set: { isRevealed: true, isRedeemed: true } }, // Updating both fields
             { session }
         );
-        
+
 
         // Commit transaction
         await session.commitTransaction();
@@ -228,8 +230,8 @@ async function redeemAllRewards(req, res) {
             userId
         );
 
-        res.status(200).json({ 
-            message: `Redeemed rewards worth Rs.${totalAmount}`, 
+        res.status(200).json({
+            message: `Redeemed rewards worth Rs.${totalAmount}`,
             expiredRewards: expiredRewards.map(r => ({ id: r._id, amount: r.amount, expiresAt: r.expiresAt }))
         });
 
@@ -255,3 +257,18 @@ async function getRewardsCount(req, res) {
     }
 }
 
+async function checkRewardsToRedeem(req, res) {
+    try {
+        const userId = req.params.userId;
+
+        const count = await Reward.countDocuments({ userId, isRedeemed: false });
+
+        if (count <= 0) {
+            return res.status(400).json({ success: false, message: 'No rewards to redeem' });
+        }
+
+        return res.status(200).json({ success: true, message: `${count} Rewards to redeem` });
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching reward count', error });
+    }
+}

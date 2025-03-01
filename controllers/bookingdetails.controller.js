@@ -117,8 +117,8 @@ async function createBooking(req, res) {
         }
 
         // Create booking inside the transaction
-        const { withAdminAmount: _, ...bookingData } = req.body;
-        const newBooking = new Booking({ ...bookingData, totalAmount: withAdminAmount });
+        const { bookingData } = req.body;
+        const newBooking = new Booking({ ...bookingData, totalAmount: withAdminAmount, withoutAdminAmount: totalAmount });
         await newBooking.save({ session });
 
         // Credit 2.5% fee to Admin Wallet
@@ -271,9 +271,8 @@ async function createBookingWithWallet(req, res) {
             return res.status(400).json({ message: "Not enough capacity for this booking." });
         }
 
-        // Create booking within transaction
-        const { withAdminAmount: _, ...bookingData } = req.body;
-        const newBooking = new Booking({ ...bookingData, totalAmount: withAdminAmount });
+        const { bookingData } = req.body;
+        const newBooking = new Booking({ ...bookingData, totalAmount: withAdminAmount, withoutAdminAmount: totalAmount });
         await newBooking.save({ session });
         
         // Deduct wallet balance and record transaction atomically
@@ -574,10 +573,10 @@ async function updateBooking(req, res) {
                 }
 
                 // Process the refund
-                const refundAmount = booking.totalAmount / 1.05; //95% Refund, 2.5 for Org and 2.5 for Admin
-                const deductAmount = booking.totalAmount / 1.05;
-                wallet.balance += refundAmount.toFixed(2);
-                event.totalAmount -= deductAmount.toFixed(2);
+                const refundAmount = (booking.withoutAdminAmount * 2) - booking.totalAmount;
+                const deductAmount = (booking.withoutAdminAmount * 2) - booking.totalAmount;
+                wallet.balance += refundAmount;
+                event.totalAmount -= deductAmount;
 
                 // Record transaction in wallet
                 wallet.transactions.push({

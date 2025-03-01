@@ -21,6 +21,7 @@ const bookingDetailsSchema = new mongoose.Schema({
         }
     }, //*
     totalAmount: { type: Number }, //*
+    withoutAdminAmount: { type: Number }, 
     transactionId: {type: String},
     pay_status: { 
         type: String, 
