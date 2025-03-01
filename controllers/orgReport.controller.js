@@ -25,7 +25,7 @@ async function generateReport(eventId) {
         0
     );
 
-    profit = profit - (profit*0.025);
+    profit = profit - (profit - 0.025);
     const cancellationProfit = event.totalAmount - profit;
     const totalProfit = event.totalAmount;
     const cancellationRate = totalBookings > 0 ? ((cancelledBookings / totalBookings) * 100).toFixed(4) : 0;
@@ -221,13 +221,13 @@ async function generateReport(eventId) {
                 { label: "Child", count: b.noOfPeoples[2] }
             ].filter(t => t.count > 0); // Remove types with count 0
     
-            const cancellationCharges = b.book_status === "Cancelled" ? `Rs. ${(b.totalAmount * 0.025).toFixed(4)}` : "-";
+            const cancellationCharges = b.book_status === "Cancelled" ? `Rs. ${(b.totalAmount -  b.withoutAdminAmount).toFixed(4)}` : "-";
 
             return [
                 i + 1,  // Sr. No.
                 b.customer_name, // Customer Name
                 types.map(t => `${t.label} (${t.count})`).join("\n"), // Combine types in one cell (newline separated)
-                b.totalAmount, // Amount
+                b.withoutAdminAmount, // Amount
                 b.book_status, // Status
                 cancellationCharges // Cancellation Charges
             ];

@@ -41,13 +41,26 @@ async function deleteExpiredCoupons() {
     }
 }
 
-// Function to delete expired coupons
+// Function to delete expired rewards
 async function deleteExpiredRewards() {
     try {
         const result = await Reward.deleteMany({ expiresAt: { $lt: new Date() } });
         console.log(`Deleted expired rewards: ${result.deletedCount}`);
     } catch (err) {
         console.error('Error deleting expired rewards:', err);
+    }
+}
+
+// Function to update lose rewards
+async function updateLoseRewards() {
+    try {
+        const result = await Reward.updateMany(
+            { isRevealed: true, type: 'lose' }, 
+            { $set: { isRedeemed: true } }    
+        );
+        console.log(`Updated revealed lose rewards to redeemed: ${result.modifiedCount}`);
+    } catch (err) {
+        console.error('Error updating lose rewards:', err);
     }
 }
 
@@ -159,6 +172,7 @@ async function scheduleDataDeletion() {
     await deleteOldNotifications();
     await deleteExpiredCoupons();
     await deleteExpiredRewards();
+    await updateLoseRewards();
 }
 
 // Run cleanup function every minute

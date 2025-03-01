@@ -93,7 +93,7 @@ async function generateRewardIfEligible(userId) {
             type: rewardType,
             expiresAt: expirationDate,
             isRevealed: false,
-            isRedeemed: rewardType === 'lose'
+            isRedeemed: false
         });
 
         await newReward.save({ session });
@@ -261,7 +261,7 @@ async function checkRewardsToRedeem(req, res) {
     try {
         const userId = req.params.userId;
 
-        const count = await Reward.countDocuments({ userId, isRedeemed: false });
+        const count = await Reward.countDocuments({ userId, isRedeemed: false, type: 'win' });
 
         if (count <= 0) {
             return res.status(400).json({ success: false, message: 'No rewards to redeem' });
