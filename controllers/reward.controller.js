@@ -211,7 +211,7 @@ async function redeemAllRewards(req, res) {
         // Mark valid rewards as redeemed
         await Reward.updateMany(
             { _id: { $in: validRewards.map(r => r._id) } },
-            { $set: { isRedeemed: true } }, // Updating both fields
+            { $set: { isRevealed: true, isRedeemed: true } }, // Updating both fields
             { session }
         );
         

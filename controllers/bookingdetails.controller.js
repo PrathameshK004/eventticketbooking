@@ -55,10 +55,8 @@ async function createBooking(req, res) {
     try {
         const { userId, eventId, noOfPeoples, totalAmount, withAdminAmount, isCoupon, couponCode } = req.body;
 
-        // Calculate the total number of people
         const totalPeople = Array.isArray(noOfPeoples) ? noOfPeoples.reduce((sum, num) => sum + num, 0) : 0;
 
-        // Fetch event and lock it for update
         const event = await Event.findById(eventId).session(session);
         if (!event) {
             await session.abortTransaction();
