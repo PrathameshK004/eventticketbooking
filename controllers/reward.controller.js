@@ -10,7 +10,7 @@ module.exports = {
     getAllUserRewards,
     redeemAllRewards,
     getRewardsCount,
-    generateRewardIfEliggible,
+    generateRewardIfEligible,
     updateReward,
     checkRewardsToRedeem
 };
