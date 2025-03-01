@@ -55,7 +55,7 @@ async function deleteExpiredRewards() {
 async function updateLoseRewards() {
     try {
         const result = await Reward.updateMany(
-            { isRevealed: true, type: 'lose' }, 
+            { isRevealed: true, type: 'lose', isRedeemed: false  }, 
             { $set: { isRedeemed: true } }    
         );
         console.log(`Updated revealed lose rewards to redeemed: ${result.modifiedCount}`);
