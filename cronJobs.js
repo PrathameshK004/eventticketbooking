@@ -58,7 +58,6 @@ async function updateLoseRewards() {
             { isRevealed: true, type: 'lose', isRedeemed: false  }, 
             { $set: { isRedeemed: true } }    
         );
-        console.log("MongoDB Update Result:", result);
         console.log(`Updated revealed lose rewards to redeemed: ${result.nModified}`);
     } catch (err) {
         console.error('Error updating lose rewards:', err);
