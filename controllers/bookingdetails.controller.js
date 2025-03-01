@@ -117,7 +117,7 @@ async function createBooking(req, res) {
         }
 
         // Create booking inside the transaction
-        const { bookingData } = req.body;
+        const bookingData = req.body;
         const newBooking = new Booking({ ...bookingData, totalAmount: withAdminAmount, withoutAdminAmount: totalAmount });
         await newBooking.save({ session });
 
@@ -271,7 +271,7 @@ async function createBookingWithWallet(req, res) {
             return res.status(400).json({ message: "Not enough capacity for this booking." });
         }
 
-        const { bookingData } = req.body;
+        const bookingData = req.body;
         const newBooking = new Booking({ ...bookingData, totalAmount: withAdminAmount, withoutAdminAmount: totalAmount });
         await newBooking.save({ session });
         
