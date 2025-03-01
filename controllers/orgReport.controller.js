@@ -21,11 +21,10 @@ async function generateReport(eventId) {
     const totalCapacity = event.totalEventCapacity;
     const availableCapacity = event.eventCapacity;
     let profit = bookings.reduce(
-        (acc, b) => acc + (b.book_status === "Booked" ? b.totalAmount : 0),
+        (acc, b) => acc + (b.book_status === "Booked" ? b.withoutAdminAmount : 0),
         0
     );
 
-    profit = profit - (profit - 0.025);
     const cancellationProfit = event.totalAmount - profit;
     const totalProfit = event.totalAmount;
     const cancellationRate = totalBookings > 0 ? ((cancelledBookings / totalBookings) * 100).toFixed(4) : 0;

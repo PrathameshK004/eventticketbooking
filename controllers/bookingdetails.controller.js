@@ -101,12 +101,10 @@ async function createBooking(req, res) {
             await coupon.save({ session });
         }
 
-        const totalAmountWithCommission = req.body.totalAmount;
-
         // Atomically update event capacity and total amount
         const updatedEvent = await Event.findOneAndUpdate(
             { _id: eventId, eventCapacity: { $gte: totalPeople } }, // Ensure enough capacity
-            { $inc: { eventCapacity: -totalPeople, totalAmount: totalAmountWithCommission } },
+            { $inc: { eventCapacity: -totalPeople, totalAmount: totalAmount } },
             { new: true, session }
         );
 
@@ -257,11 +255,10 @@ async function createBookingWithWallet(req, res) {
         }
 
 
-        const totalAmountWithCommission = totalAmount;
         // Atomically update event capacity and total amount
         const updatedEvent = await Event.findOneAndUpdate(
             { _id: eventId, eventCapacity: { $gte: totalPeople } },
-            { $inc: { eventCapacity: -totalPeople, totalAmount: totalAmountWithCommission } },
+            { $inc: { eventCapacity: -totalPeople, totalAmount: totalAmount } },
             { new: true, session }
         );
 
