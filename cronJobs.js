@@ -111,7 +111,7 @@ async function deletePastEvents() {
 
             // If event is live and start time has passed in IST, mark as not live
             if (event.isLive && startPassed) {
-                console.log(`  Marking event ${event._id} as not live (IST comparison)`);
+                console.log(`Marking event ${event._id} as not live (IST comparison)`);
                 await Event.updateOne({ _id: event._id }, { $set: { isLive: false } });
                 event.isLive = false;
             }
@@ -135,6 +135,7 @@ async function deletePastEvents() {
                 });
                 await wallet.save();
                 event.holdAmount = 0;
+                console.log(`Release of hold balance of event: ${event.eventTitle} to ${event.userId}`);
                 await event.save();
             }
 
