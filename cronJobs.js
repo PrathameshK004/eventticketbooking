@@ -203,3 +203,6 @@ async function scheduleDataDeletion() {
 cron.schedule('* * * * *', scheduleDataDeletion);
 
 console.log('Cron jobs scheduled for automatic data cleanup.');
+console.log("Server Timezone:", Intl.DateTimeFormat().resolvedOptions().timeZone);
+console.log("Current Server Time:", new Date().toString());
+
