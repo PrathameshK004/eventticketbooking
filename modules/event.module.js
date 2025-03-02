@@ -22,6 +22,7 @@ const eventSchema = new mongoose.Schema({
     userId: { type: String, required: true },
     fileId: {type: String },
     totalAmount: {type: Number, default: 0 },
+    holdAmount: {type: Number, default: 0 },
     isTemp: { type: Boolean, default: true},
     isLive: { type: Boolean, default: false},
     approveDate: { type: Date }

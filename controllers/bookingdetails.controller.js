@@ -104,7 +104,7 @@ async function createBooking(req, res) {
         // Atomically update event capacity and total amount
         const updatedEvent = await Event.findOneAndUpdate(
             { _id: eventId, eventCapacity: { $gte: totalPeople } }, // Ensure enough capacity
-            { $inc: { eventCapacity: -totalPeople, totalAmount: totalAmount } },
+            { $inc: { eventCapacity: -totalPeople, totalAmount: totalAmount, holdAmount: totalAmount } },
             { new: true, session }
         );
 
@@ -258,7 +258,7 @@ async function createBookingWithWallet(req, res) {
         // Atomically update event capacity and total amount
         const updatedEvent = await Event.findOneAndUpdate(
             { _id: eventId, eventCapacity: { $gte: totalPeople } },
-            { $inc: { eventCapacity: -totalPeople, totalAmount: totalAmount } },
+            { $inc: { eventCapacity: -totalPeople, totalAmount: totalAmount, holdAmount: totalAmount } },
             { new: true, session }
         );
 
@@ -573,6 +573,7 @@ async function updateBooking(req, res) {
                 const refundAmount = (booking.withoutAdminAmount * 2) - booking.totalAmount;
                 const deductAmount = (booking.withoutAdminAmount * 2) - booking.totalAmount;
                 wallet.balance += refundAmount;
+                event.holdAmount -= deductAmount;
                 event.totalAmount -= deductAmount;
 
                 // Record transaction in wallet
