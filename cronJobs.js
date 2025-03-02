@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const mongoose = require('mongoose');
 const { GridFSBucket } = require('mongodb');
-const moment = require('moment');
+const moment = require('moment-timezone');
 const ObjectId = require('mongoose').Types.ObjectId;
 const AdminNotification = require('./modules/adminNotification.module.js'); // 10 days old
 const Event = require('./modules/event.module.js'); // isLive to false with startTime and delete 1 month
@@ -77,12 +77,12 @@ async function deletePastEvents() {
 
             const [startTimeStr, endTimeStr] = event.eventTime.split('-').map(time => time.trim());
 
-            const eventDateStartTime = moment(event.eventDate).format('YYYY-MM-DD') + ' ' + startTimeStr;
-            const eventFullDateStartTime = moment(eventDateStartTime, 'YYYY-MM-DD hh:mm A').toDate();
+            const eventDateStartTime = moment.tz(`${event.eventDate} ${startTimeStr}`, 'YYYY-MM-DD hh:mm A', 'Asia/Kolkata');
+            const eventFullDateStartTime = eventDateStartTime.toDate();
             
-            const eventDateEndTime = moment(event.eventDate).format('YYYY-MM-DD') + ' ' + endTimeStr;
-            const eventFullDateEndTime = moment(eventDateEndTime, 'YYYY-MM-DD hh:mm A').toDate();
-
+            const eventDateEndTime = moment.tz(`${event.eventDate} ${endTimeStr}`, 'YYYY-MM-DD hh:mm A', 'Asia/Kolkata');
+            const eventFullDateEndTime = eventDateEndTime.toDate();
+            
         
             if (event.isLive && eventFullDateStartTime <= now) {
                 await Event.updateOne({ _id: event._id }, { $set: { isLive: false } });
@@ -111,7 +111,8 @@ async function deletePastEvents() {
 
 
             // Add 30 days (1 month) to the event date
-            const deletionThreshold = moment(eventFullDateStartTime).add(30, 'days').toDate();
+            const deletionThreshold = moment(eventFullDateStartTime).tz('Asia/Kolkata').toDate();
+        
 
             // Check if the event is now older than 30 days
             if (deletionThreshold < now) {
