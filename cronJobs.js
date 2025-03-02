@@ -70,7 +70,7 @@ async function deletePastEvents() {
     try {
         const pastEvents = await Event.find(); // Fetch all events
 
-        const now = new Date(); // Current date and time
+        const now = moment().tz('Asia/Kolkata').toDate();// Current date and time
 
         for (const event of pastEvents) {
             if (!event.eventTime || !event.eventDate) continue; // Skip if missing data
