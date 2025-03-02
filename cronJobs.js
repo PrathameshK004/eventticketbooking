@@ -77,22 +77,19 @@ async function deletePastEvents() {
 
             const [startTimeStr, endTimeStr] = event.eventTime.split('-').map(time => time.trim());
 
-            // Convert eventDate + startTime into a full DateTime object
-            const eventDateStr = moment(event.eventDate).format('YYYY-MM-DD');
-            const eventStartDateTime = moment(`${eventDateStr} ${startTimeStr}`, 'YYYY-MM-DD hh:mm A').toDate();
-            const eventEndDateTime = moment(`${eventDateStr} ${endTimeStr}`, 'YYYY-MM-DD hh:mm A').toDate();
+            const eventDateStartTime = moment(event.eventDate).format('YYYY-MM-DD') + ' ' + startTimeStr;
+            const eventFullDateStartTime = moment(eventDateStartTime, 'YYYY-MM-DD hh:mm A').toDate();
+            
+            const eventDateEndTime = moment(event.eventDate).format('YYYY-MM-DD') + ' ' + endTimeStr;
+            const eventFullDateEndTime = moment(eventDateEndTime, 'YYYY-MM-DD hh:mm A').toDate();
 
-            console.log(`Current Time: ${now}`);
-            console.log(`Event Start Time: ${eventStartDateTime}`);
-            console.log(`Event End Time: ${eventEndDateTime}`);
-
-
-            if (event.isLive && eventStartDateTime <= now) {
+        
+            if (event.isLive && eventFullDateStartTime <= now) {
                 await Event.updateOne({ _id: event._id }, { $set: { isLive: false } });
                 console.log(`Marked event ${event._id} as not live`);
             }
 
-            if (!event.isLive && eventEndDateTime <= now && event.holdAmount > 0) {
+            if (!event.isLive && eventFullDateEndTime <= now && event.holdAmount > 0) {
                 const refundAmount = event.holdAmount;
                 let wallet = await Wallet.findOne({ userId: event.userId });
                 if (!wallet) {
@@ -114,7 +111,7 @@ async function deletePastEvents() {
 
 
             // Add 30 days (1 month) to the event date
-            const deletionThreshold = moment(eventStartDateTime).add(30, 'days').toDate();
+            const deletionThreshold = moment(eventFullDateStartTime).add(30, 'days').toDate();
 
             // Check if the event is now older than 30 days
             if (deletionThreshold < now) {
