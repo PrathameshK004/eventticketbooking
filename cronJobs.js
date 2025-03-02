@@ -82,12 +82,17 @@ async function deletePastEvents() {
             const eventStartDateTime = moment(`${eventDateStr} ${startTimeStr}`, 'YYYY-MM-DD hh:mm A').toDate();
             const eventEndDateTime = moment(`${eventDateStr} ${endTimeStr}`, 'YYYY-MM-DD hh:mm A').toDate();
 
+            console.log(`Current Time: ${now}`);
+            console.log(`Event Start Time: ${eventStartDateTime}`);
+            console.log(`Event End Time: ${eventEndDateTime}`);
+
+
             if (event.isLive && eventStartDateTime <= now) {
                 await Event.updateOne({ _id: event._id }, { $set: { isLive: false } });
                 console.log(`Marked event ${event._id} as not live`);
             }
 
-            if (!event.isLive && eventEndDateTime <= now) {
+            if (!event.isLive && eventEndDateTime <= now && event.holdAmount > 0) {
                 const refundAmount = event.holdAmount;
                 let wallet = await Wallet.findOne({ userId: event.userId });
                 if (!wallet) {
