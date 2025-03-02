@@ -33,14 +33,51 @@ async function deleteExpiredTokens() {
 }
 
 // Function to delete expired coupons
+async function deleteExpiredCoupons() {
+    try {
+        const result = await Coupon.deleteMany({ expirationDate: { $lt: new Date() } });
+        console.log(`Deleted expired coupons: ${result.deletedCount}`);
+    } catch (err) {
+        console.error('Error deleting expired coupons:', err);
+    }
+}
+
+// Function to delete expired rewards
+async function deleteExpiredRewards() {
+    try {
+        const result = await Reward.deleteMany({ expiresAt: { $lt: new Date() } });
+        console.log(`Deleted expired rewards: ${result.deletedCount}`);
+    } catch (err) {
+        console.error('Error deleting expired rewards:', err);
+    }
+}
+
+// Function to update lose rewards
+async function updateLoseRewards() {
+    try {
+        const result = await Reward.updateMany(
+            { isRevealed: true, type: 'lose', isRedeemed: false },
+            { $set: { isRedeemed: true } }
+        );
+        console.log(`Updated revealed lose rewards to redeemed: ${result.nModified}`);
+    } catch (err) {
+        console.error('Error updating lose rewards:', err);
+    }
+}
+
+
 async function deletePastEvents() {
     try {
         const pastEvents = await Event.find(); // Fetch all events
-        const now = new Date(); // Current date and time
         
-        // For debugging: Log both UTC and local time
-        console.log(`Current time (UTC): ${now.toISOString()}`);
-        console.log(`Current time (Local): ${now.toString()}`);
+        // Current time in UTC
+        const nowUTC = new Date();
+        
+        // Convert to IST by adding 5 hours and 30 minutes
+        const nowIST = new Date(nowUTC.getTime() + (5.5 * 60 * 60 * 1000));
+        
+        console.log(`Current time (UTC): ${nowUTC.toISOString()}`);
+        console.log(`Current time (IST): ${nowIST.toISOString()} (${nowIST.toString()})`);
 
         for (const event of pastEvents) {
             if (!event.eventTime || !event.eventDate) {
@@ -58,12 +95,10 @@ async function deletePastEvents() {
             const startTimeStr = timeComponents[0].trim();
             const endTimeStr = timeComponents[1].trim();
 
-            // IMPORTANT: Use moment.tz to explicitly set timezone if needed
-            // Example: const eventDateStr = moment(event.eventDate).tz('Asia/Kolkata').format('YYYY-MM-DD');
-            // Or use the server's local timezone:
+            // Parse dates in IST context
             const eventDateStr = moment(event.eventDate).format('YYYY-MM-DD');
             
-            // Create moment objects with explicit parsing format
+            // Create moment objects - assuming these times are already in IST
             const eventStartMoment = moment(`${eventDateStr} ${startTimeStr}`, 'YYYY-MM-DD hh:mm A');
             const eventEndMoment = moment(`${eventDateStr} ${endTimeStr}`, 'YYYY-MM-DD hh:mm A');
             
@@ -73,37 +108,31 @@ async function deletePastEvents() {
                 continue;
             }
             
+            // IMPORTANT: Convert from IST to UTC for proper storage
+            // But for comparison purposes, we'll use IST times directly
             const eventFullDateStartTime = eventStartMoment.toDate();
             const eventFullDateEndTime = eventEndMoment.toDate();
             
             console.log(`Event ${event._id}: ${event.eventTitle}`);
             console.log(`  isLive: ${event.isLive}`);
-            console.log(`  Start: ${eventFullDateStartTime.toISOString()} (${eventFullDateStartTime.toString()})`);
-            console.log(`  End: ${eventFullDateEndTime.toISOString()} (${eventFullDateEndTime.toString()})`);
-            console.log(`  Now: ${now.toISOString()} (${now.toString()})`);
+            console.log(`  Start (IST): ${eventFullDateStartTime.toISOString()}`);
+            console.log(`  End (IST): ${eventFullDateEndTime.toISOString()}`);
+            console.log(`  Now (IST): ${nowIST.toISOString()}`);
             
-            // For easier debugging, print the time difference in hours
-            const hoursDiff = moment(eventFullDateStartTime).diff(moment(now), 'hours', true);
-            console.log(`  Hours until start: ${hoursDiff.toFixed(2)}`);
-            console.log(`  Start passed? ${eventFullDateStartTime <= now}`);
+            // Compare using IST times
+            const startPassed = eventFullDateStartTime <= nowIST;
+            console.log(`  Start passed in IST? ${startPassed}`);
 
-            // CUSTOM COMPARISON OPTION:
-            // If you need to compare only the date part regardless of time:
-            // const startDateOnly = moment(eventFullDateStartTime).format('YYYY-MM-DD');
-            // const nowDateOnly = moment(now).format('YYYY-MM-DD');
-            // const dateOnlyPassed = startDateOnly <= nowDateOnly;
-            // console.log(`  Date-only comparison passed? ${dateOnlyPassed}`);
-            
-            // If event is live and start time has passed, mark as not live
-            if (event.isLive && eventFullDateStartTime <= now) {
-                console.log(`  Marking event ${event._id} as not live`);
+            // If event is live and start time has passed in IST, mark as not live
+            if (event.isLive && startPassed) {
+                console.log(`  Marking event ${event._id} as not live (IST comparison)`);
                 await Event.updateOne({ _id: event._id }, { $set: { isLive: false } });
                 console.log(`  Successfully marked event ${event._id} as not live`);
                 event.isLive = false;
             }
 
-            // Process hold amount refund logic
-            if (!event.isLive && eventFullDateEndTime <= now && event.holdAmount > 0) {
+            // Process hold amount refund logic - also using IST time
+            if (!event.isLive && eventFullDateEndTime <= nowIST && event.holdAmount > 0) {
                 console.log(`  Processing refund for event ${event._id}`);
                 const refundAmount = event.holdAmount;
                 
@@ -127,13 +156,13 @@ async function deletePastEvents() {
                 await event.save();
             }
 
-            // Add 30 days (1 month) to the event date for deletion threshold
+            // Add 30 days (1 month) to the event date for deletion threshold - in IST
             const deletionThreshold = moment(eventFullDateEndTime).add(30, 'days').toDate();
-            console.log(`  Deletion threshold: ${deletionThreshold.toISOString()}`);
-            console.log(`  Ready for deletion? ${deletionThreshold < now}`);
+            console.log(`  Deletion threshold (IST): ${deletionThreshold.toISOString()}`);
+            console.log(`  Ready for deletion in IST? ${deletionThreshold < nowIST}`);
 
-            // Check if the event is now older than 30 days after end time
-            if (deletionThreshold < now) {
+            // Check if the event is now older than 30 days after end time - in IST
+            if (deletionThreshold < nowIST) {
                 console.log(`  Deleting event ${event._id}`);
                 
                 // Delete associated files
