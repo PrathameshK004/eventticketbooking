@@ -57,7 +57,7 @@ mongoose.connect(mongoURI, {
   .catch(err => console.error('MongoDB connection error:', err));
 
 // Serve static files from "public"
-app.use('/file', express.static(path.join(__dirname, 'public')));
+//app.use('/file', express.static(path.join(__dirname, 'public')));
 
 // Root route (`/`) does nothing
 app.get('/', (req, res) => {
