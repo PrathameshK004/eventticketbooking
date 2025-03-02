@@ -1,12 +1,11 @@
 const cron = require('node-cron');
 const mongoose = require('mongoose');
 const { GridFSBucket } = require('mongodb');
-const moment = require('moment-timezone');
+const moment = require('moment');
 const ObjectId = require('mongoose').Types.ObjectId;
 const AdminNotification = require('./modules/adminNotification.module.js'); // 10 days old
 const Event = require('./modules/event.module.js'); // isLive to false with startTime and delete 1 month
 const User = require('./modules/user.module.js');
-const Wallet = require('./modules/wallet.module.js');
 const Enquiry = require('./modules/enquiry.module.js'); // 1 month old
 const Notification = require('./modules/notification.module.js'); // 10 days old
 const Token = require('./modules/token.module.js'); // If expired
@@ -70,49 +69,25 @@ async function deletePastEvents() {
     try {
         const pastEvents = await Event.find(); // Fetch all events
 
-        const now = moment().tz('Asia/Kolkata').toDate();// Current date and time
+        const now = new Date(); // Current date and time
 
         for (const event of pastEvents) {
             if (!event.eventTime || !event.eventDate) continue; // Skip if missing data
 
-            const [startTimeStr, endTimeStr] = event.eventTime.split('-').map(time => time.trim());
+            // Extract the start time (first part before "-")
+            const startTimeStr = event.eventTime.split('-')[0].trim(); // "HH:MM AM/PM"
 
-            const eventDateStartTime = moment.tz(`${event.eventDate} ${startTimeStr}`, 'YYYY-MM-DD hh:mm A', 'Asia/Kolkata');
-            const eventFullDateStartTime = eventDateStartTime.toDate();
-            
-            const eventDateEndTime = moment.tz(`${event.eventDate} ${endTimeStr}`, 'YYYY-MM-DD hh:mm A', 'Asia/Kolkata');
-            const eventFullDateEndTime = eventDateEndTime.toDate();
-            
-        
-            if (event.isLive && eventFullDateStartTime <= now) {
+            // Convert eventDate + startTime into a full DateTime object
+            const eventDateTime = moment(event.eventDate).format('YYYY-MM-DD') + ' ' + startTimeStr;
+            const eventFullDateTime = moment(eventDateTime, 'YYYY-MM-DD hh:mm A').toDate();
+
+            if (event.isLive && eventFullDateTime <= now) {
                 await Event.updateOne({ _id: event._id }, { $set: { isLive: false } });
                 console.log(`Marked event ${event._id} as not live`);
             }
 
-            if (!event.isLive && eventFullDateEndTime <= now && event.holdAmount > 0) {
-                const refundAmount = event.holdAmount;
-                let wallet = await Wallet.findOne({ userId: event.userId });
-                if (!wallet) {
-                    return res.status(404).json({ error: 'Wallet not found for the user' });
-                }
-                // Record transaction in wallet
-                wallet.balance += refundAmount;
-                wallet.transactions.push({
-                    amount: refundAmount,
-                    type: 'Credit',
-                    description: `Release of hold balance of event: ${event.eventTitle}`
-                });
-                await wallet.save();
-                console.log(`Credited ${refundAmount} to user ${event.userId}'s wallet`);
-
-                event.holdAmount = 0;
-                await event.save();
-            }
-
-
             // Add 30 days (1 month) to the event date
-            const deletionThreshold = moment(eventFullDateStartTime).tz('Asia/Kolkata').toDate();
-        
+            const deletionThreshold = moment(eventFullDateTime).add(30, 'days').toDate();
 
             // Check if the event is now older than 30 days
             if (deletionThreshold < now) {
@@ -204,6 +179,3 @@ async function scheduleDataDeletion() {
 cron.schedule('* * * * *', scheduleDataDeletion);
 
 console.log('Cron jobs scheduled for automatic data cleanup.');
-console.log("Server Timezone:", Intl.DateTimeFormat().resolvedOptions().timeZone);
-console.log("Current Server Time:", new Date().toString());
-
