@@ -70,7 +70,7 @@ async function deletePastEvents() {
     try {
         const pastEvents = await Event.find(); // Fetch all events
 
-        const now = new Date(); // Current date and time
+        const now =  moment(new Date()).utcOffset(330).format("YYYY-MM-DD HH:mm:ss");
 
         for (const event of pastEvents) {
             if (!event.eventTime || !event.eventDate) continue; // Skip if missing data
@@ -81,10 +81,10 @@ async function deletePastEvents() {
 
             // Convert eventDate + startTime into a full DateTime object
             const eventDateStartTime = moment(event.eventDate).format('YYYY-MM-DD') + ' ' + startTimeStr;
-            const eventFullDateStartTime = moment(eventDateStartTime, 'YYYY-MM-DD hh:mm A').toDate();
+            const eventFullDateStartTime = moment(eventDateStartTime, 'YYYY-MM-DD hh:mm A').utcOffset(330).toDate();
             
             const eventDateEndTime = moment(event.eventDate).format('YYYY-MM-DD') + ' ' + endTimeStr;
-            const eventFullDateEndTime = moment(eventDateEndTime, 'YYYY-MM-DD hh:mm A').toDate();
+            const eventFullDateEndTime = moment(eventDateEndTime, 'YYYY-MM-DD hh:mm A').utcOffset(330).toDate();
             console.log(`Start Date: ${eventFullDateStartTime}`);
             console.log(`End Date: ${eventFullDateEndTime}`);
             console.log(`Now Date: ${now}`);
