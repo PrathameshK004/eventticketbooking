@@ -75,20 +75,15 @@ async function deletePastEvents() {
         
         // Convert to IST by adding 5 hours and 30 minutes
         const nowIST = new Date(nowUTC.getTime() + (5.5 * 60 * 60 * 1000));
-        
-        console.log(`Current time (UTC): ${nowUTC.toISOString()}`);
-        console.log(`Current time (IST): ${nowIST.toISOString()} (${nowIST.toString()})`);
 
         for (const event of pastEvents) {
             if (!event.eventTime || !event.eventDate) {
-                console.log(`Skipping event ${event._id}: Missing eventTime or eventDate`);
                 continue;
             }
 
             // Extract the start time and end time
             const timeComponents = event.eventTime.split('-');
             if (timeComponents.length !== 2) {
-                console.log(`Skipping event ${event._id}: Invalid time format ${event.eventTime}`);
                 continue;
             }
 
@@ -103,8 +98,6 @@ async function deletePastEvents() {
             const eventEndMoment = moment(`${eventDateStr} ${endTimeStr}`, 'YYYY-MM-DD hh:mm A');
             
             if (!eventStartMoment.isValid() || !eventEndMoment.isValid()) {
-                console.log(`Skipping event ${event._id}: Invalid date/time conversion`);
-                console.log(`  Date: ${eventDateStr}, Start: ${startTimeStr}, End: ${endTimeStr}`);
                 continue;
             }
             
@@ -113,27 +106,18 @@ async function deletePastEvents() {
             const eventFullDateStartTime = eventStartMoment.toDate();
             const eventFullDateEndTime = eventEndMoment.toDate();
             
-            console.log(`Event ${event._id}: ${event.eventTitle}`);
-            console.log(`  isLive: ${event.isLive}`);
-            console.log(`  Start (IST): ${eventFullDateStartTime.toISOString()}`);
-            console.log(`  End (IST): ${eventFullDateEndTime.toISOString()}`);
-            console.log(`  Now (IST): ${nowIST.toISOString()}`);
-            
             // Compare using IST times
             const startPassed = eventFullDateStartTime <= nowIST;
-            console.log(`  Start passed in IST? ${startPassed}`);
 
             // If event is live and start time has passed in IST, mark as not live
             if (event.isLive && startPassed) {
                 console.log(`  Marking event ${event._id} as not live (IST comparison)`);
                 await Event.updateOne({ _id: event._id }, { $set: { isLive: false } });
-                console.log(`  Successfully marked event ${event._id} as not live`);
                 event.isLive = false;
             }
 
             // Process hold amount refund logic - also using IST time
             if (!event.isLive && eventFullDateEndTime <= nowIST && event.holdAmount > 0) {
-                console.log(`  Processing refund for event ${event._id}`);
                 const refundAmount = event.holdAmount;
                 
                 let wallet = await Wallet.findOne({ userId: event.userId });
@@ -150,16 +134,12 @@ async function deletePastEvents() {
                     description: `Release of hold balance of event: ${event.eventTitle}`
                 });
                 await wallet.save();
-                console.log(`  Credited ${refundAmount} to user ${event.userId}'s wallet`);
-
                 event.holdAmount = 0;
                 await event.save();
             }
 
             // Add 30 days (1 month) to the event date for deletion threshold - in IST
             const deletionThreshold = moment(eventFullDateEndTime).add(30, 'days').toDate();
-            console.log(`  Deletion threshold (IST): ${deletionThreshold.toISOString()}`);
-            console.log(`  Ready for deletion in IST? ${deletionThreshold < nowIST}`);
 
             // Check if the event is now older than 30 days after end time - in IST
             if (deletionThreshold < nowIST) {
