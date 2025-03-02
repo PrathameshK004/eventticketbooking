@@ -56,13 +56,11 @@ mongoose.connect(mongoURI, {
   .then(() => console.log('MongoDB connected successfully.'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Serve static files from "public"
-//app.use('/file', express.static(path.join(__dirname, 'public')));
-
-// Root route (`/`) does nothing
-app.get('/', (req, res) => {
-  res.status(204).send(); // No content
+// Serve Frontend at /file
+app.get('/file', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
 
 // Routes
 app.use('/file/upload', uploadRoutes);

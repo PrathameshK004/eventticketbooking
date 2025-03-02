@@ -6,6 +6,7 @@ const ObjectId = require('mongoose').Types.ObjectId;
 const AdminNotification = require('./modules/adminNotification.module.js'); // 10 days old
 const Event = require('./modules/event.module.js'); // isLive to false with startTime and delete 1 month
 const User = require('./modules/user.module.js');
+const Wallet = require('./modules/wallet.module.js');
 const Enquiry = require('./modules/enquiry.module.js'); // 1 month old
 const Notification = require('./modules/notification.module.js'); // 10 days old
 const Token = require('./modules/token.module.js'); // If expired
@@ -76,18 +77,42 @@ async function deletePastEvents() {
 
             // Extract the start time (first part before "-")
             const startTimeStr = event.eventTime.split('-')[0].trim(); // "HH:MM AM/PM"
+            const endTimeStr = event.eventTime.split('-')[1].trim(); // "HH:MM AM/PM"
 
             // Convert eventDate + startTime into a full DateTime object
-            const eventDateTime = moment(event.eventDate).format('YYYY-MM-DD') + ' ' + startTimeStr;
-            const eventFullDateTime = moment(eventDateTime, 'YYYY-MM-DD hh:mm A').toDate();
+            const eventDateStartTime = moment(event.eventDate).format('YYYY-MM-DD') + ' ' + startTimeStr;
+            const eventFullDateStartTime = moment(eventDateStartTime, 'YYYY-MM-DD hh:mm A').toDate();
+            
+            const eventDateEndTime = moment(event.eventDate).format('YYYY-MM-DD') + ' ' + endTimeStr;
+            const eventFullDateEndTime = moment(eventDateEndTime, 'YYYY-MM-DD hh:mm A').toDate();
 
-            if (event.isLive && eventFullDateTime <= now) {
+            if (event.isLive && eventDateStartTime <= now) {
                 await Event.updateOne({ _id: event._id }, { $set: { isLive: false } });
                 console.log(`Marked event ${event._id} as not live`);
             }
 
+            if (!event.isLive && eventFullDateEndTime <= now && event.holdAmount > 0) {
+                const refundAmount = event.holdAmount;
+                let wallet = await Wallet.findOne({ userId: event.userId });
+                if (!wallet) {
+                    return res.status(404).json({ error: 'Wallet not found for the user' });
+                }
+                // Record transaction in wallet
+                wallet.balance += refundAmount;
+                wallet.transactions.push({
+                    amount: refundAmount,
+                    type: 'Credit',
+                    description: `Release of hold balance of event: ${event.eventTitle}`
+                });
+                await wallet.save();
+                console.log(`Credited ${refundAmount} to user ${event.userId}'s wallet`);
+
+                event.holdAmount = 0;
+                await event.save();
+            }
+
             // Add 30 days (1 month) to the event date
-            const deletionThreshold = moment(eventFullDateTime).add(30, 'days').toDate();
+            const deletionThreshold = moment(eventFullDateEndTime).add(30, 'days').toDate();
 
             // Check if the event is now older than 30 days
             if (deletionThreshold < now) {
