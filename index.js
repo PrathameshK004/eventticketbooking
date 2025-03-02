@@ -57,11 +57,14 @@ mongoose.connect(mongoURI, {
   .catch(err => console.error('MongoDB connection error:', err));
 
   
-app.use('/api', indexRouter);
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 
 // Serve Frontend at /file
 app.get('/file', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'file.html'));
 });
 
 
@@ -69,6 +72,7 @@ app.get('/file', (req, res) => {
 app.use('/file/upload', uploadRoutes);
 app.use('/file/retrieve/enquiryFile', retrieveEnquiryRoutes);
 app.use('/file/retrieve', retrieveRoutes);
+app.use('/api', indexRouter);
 
 // Cache-Control Middleware
 app.use((req, res, next) => {
