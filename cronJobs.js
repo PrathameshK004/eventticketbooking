@@ -93,16 +93,29 @@ async function deletePastEvents() {
             // Parse dates in IST context
             const eventDateStr = moment(event.eventDate).format('YYYY-MM-DD');
             
-            // Create moment objects - assuming these times are already in IST
+            // Create moment objects for start time
             const eventStartMoment = moment(`${eventDateStr} ${startTimeStr}`, 'YYYY-MM-DD hh:mm A');
-            const eventEndMoment = moment(`${eventDateStr} ${endTimeStr}`, 'YYYY-MM-DD hh:mm A');
+            
+            // Check if end time is in AM and start time is in PM, indicating overnight event
+            const isStartPM = startTimeStr.includes('PM');
+            const isEndAM = endTimeStr.includes('AM');
+            
+            // For end time, determine if we need to add a day
+            let eventEndMoment;
+            if (isStartPM && isEndAM) {
+                // If start is PM and end is AM, end time is on the next day
+                const nextDay = moment(eventDateStr).add(1, 'days').format('YYYY-MM-DD');
+                eventEndMoment = moment(`${nextDay} ${endTimeStr}`, 'YYYY-MM-DD hh:mm A');
+            } else {
+                // Same day event
+                eventEndMoment = moment(`${eventDateStr} ${endTimeStr}`, 'YYYY-MM-DD hh:mm A');
+            }
             
             if (!eventStartMoment.isValid() || !eventEndMoment.isValid()) {
                 continue;
             }
             
-            // IMPORTANT: Convert from IST to UTC for proper storage
-            // But for comparison purposes, we'll use IST times directly
+            // Convert moment objects to Date objects
             const eventFullDateStartTime = eventStartMoment.toDate();
             const eventFullDateEndTime = eventEndMoment.toDate();
             
@@ -140,7 +153,7 @@ async function deletePastEvents() {
             }
 
             // Add 30 days (1 month) to the event date for deletion threshold - in IST
-            const deletionThreshold = moment(eventFullDateEndTime).add(30, 'days').toDate();
+            const deletionThreshold = moment(eventFullDateStartTime).add(30, 'days').toDate();
 
             // Check if the event is now older than 30 days after end time - in IST
             if (deletionThreshold < nowIST) {
@@ -200,7 +213,6 @@ async function deletePastEvents() {
         console.error('Error in deletePastEvents function:', err);
     }
 }
-
 
 
 // Function to delete old enquiries (older than 1 month)
