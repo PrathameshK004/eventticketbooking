@@ -86,7 +86,7 @@ async function deletePastEvents() {
             const eventDateEndTime = moment(event.eventDate).format('YYYY-MM-DD') + ' ' + endTimeStr;
             const eventFullDateEndTime = moment(eventDateEndTime, 'YYYY-MM-DD hh:mm A').toDate();
 
-            if (event.isLive && eventDateStartTime <= now) {
+            if (event.isLive && eventFullDateStartTime <= now) {
                 await Event.updateOne({ _id: event._id }, { $set: { isLive: false } });
                 console.log(`Marked event ${event._id} as not live`);
             }
