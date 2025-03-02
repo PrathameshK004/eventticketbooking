@@ -37,26 +37,33 @@ async function deletePastEvents() {
     try {
         const pastEvents = await Event.find(); // Fetch all events
         const now = new Date(); // Current date and time
-        console.log(`Current time: ${now.toISOString()}`);
+        
+        // For debugging: Log both UTC and local time
+        console.log(`Current time (UTC): ${now.toISOString()}`);
+        console.log(`Current time (Local): ${now.toString()}`);
 
         for (const event of pastEvents) {
             if (!event.eventTime || !event.eventDate) {
                 console.log(`Skipping event ${event._id}: Missing eventTime or eventDate`);
-                continue; // Skip if missing data
+                continue;
             }
 
             // Extract the start time and end time
             const timeComponents = event.eventTime.split('-');
             if (timeComponents.length !== 2) {
                 console.log(`Skipping event ${event._id}: Invalid time format ${event.eventTime}`);
-                continue; // Skip if time format is invalid
+                continue;
             }
 
             const startTimeStr = timeComponents[0].trim();
             const endTimeStr = timeComponents[1].trim();
 
-            // Convert eventDate + startTime into a full DateTime object
+            // IMPORTANT: Use moment.tz to explicitly set timezone if needed
+            // Example: const eventDateStr = moment(event.eventDate).tz('Asia/Kolkata').format('YYYY-MM-DD');
+            // Or use the server's local timezone:
             const eventDateStr = moment(event.eventDate).format('YYYY-MM-DD');
+            
+            // Create moment objects with explicit parsing format
             const eventStartMoment = moment(`${eventDateStr} ${startTimeStr}`, 'YYYY-MM-DD hh:mm A');
             const eventEndMoment = moment(`${eventDateStr} ${endTimeStr}`, 'YYYY-MM-DD hh:mm A');
             
@@ -71,18 +78,27 @@ async function deletePastEvents() {
             
             console.log(`Event ${event._id}: ${event.eventTitle}`);
             console.log(`  isLive: ${event.isLive}`);
-            console.log(`  Start: ${eventFullDateStartTime.toISOString()}`);
-            console.log(`  End: ${eventFullDateEndTime.toISOString()}`);
-            console.log(`  Now: ${now.toISOString()}`);
+            console.log(`  Start: ${eventFullDateStartTime.toISOString()} (${eventFullDateStartTime.toString()})`);
+            console.log(`  End: ${eventFullDateEndTime.toISOString()} (${eventFullDateEndTime.toString()})`);
+            console.log(`  Now: ${now.toISOString()} (${now.toString()})`);
+            
+            // For easier debugging, print the time difference in hours
+            const hoursDiff = moment(eventFullDateStartTime).diff(moment(now), 'hours', true);
+            console.log(`  Hours until start: ${hoursDiff.toFixed(2)}`);
             console.log(`  Start passed? ${eventFullDateStartTime <= now}`);
 
+            // CUSTOM COMPARISON OPTION:
+            // If you need to compare only the date part regardless of time:
+            // const startDateOnly = moment(eventFullDateStartTime).format('YYYY-MM-DD');
+            // const nowDateOnly = moment(now).format('YYYY-MM-DD');
+            // const dateOnlyPassed = startDateOnly <= nowDateOnly;
+            // console.log(`  Date-only comparison passed? ${dateOnlyPassed}`);
+            
             // If event is live and start time has passed, mark as not live
             if (event.isLive && eventFullDateStartTime <= now) {
                 console.log(`  Marking event ${event._id} as not live`);
                 await Event.updateOne({ _id: event._id }, { $set: { isLive: false } });
                 console.log(`  Successfully marked event ${event._id} as not live`);
-                
-                // Reload the event to make sure our local copy reflects the database state
                 event.isLive = false;
             }
 
