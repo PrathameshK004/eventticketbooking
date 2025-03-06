@@ -168,6 +168,11 @@ const createToken = (key) => { // Update to key from id
     });
 }
 
+const createAdminToken = (key) => { // Update to key from id
+    return jwt.sign({ key }, process.env.JWTSecret, {
+        expiresIn: '2d'
+    });
+}
 async function createUser(req, res) {
     try {
 
@@ -555,7 +560,7 @@ async function validateAdminLogin(req, res) {
         user.codeExpiry = null;
         await user.save();
 
-        const token = createToken(user._id); // Ensure this is based on user._id
+        const token = createAdminToken(user._id); // Ensure this is based on user._id
         res.cookie('jwt', token, {
             httpOnly: true,
             secure: true,
