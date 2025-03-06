@@ -164,7 +164,7 @@ async function getUserById(req, res) {
 
 const createToken = (key) => { // Update to key from id
     return jwt.sign({ key }, process.env.JWTSecret, {
-        expiresIn: 2 * 60 * 60
+        expiresIn: '7d'
     });
 }
 
