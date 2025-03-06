@@ -194,7 +194,7 @@ async function adminTransferToBank(req, res) {
         const adminWalletId = process.env.ADMIN_WALLET_ID;
         const { amount, bankAccount, ifscCode } = req.body;
 
-        if (!bankAccount || !ifscCode || amount) {
+        if (!bankAccount || !ifscCode || !amount) {
             return res.status(400).json({ message: "Bank account details, IFSC code and Amount are required." });
         }
 
