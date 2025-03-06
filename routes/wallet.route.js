@@ -13,5 +13,9 @@ router.post('/transferToBank/:userId', verifyToken, walletInterceptor.validateUs
 //Admin Wallet
 router.get('/adminWallet/getWalletDetails', verifyToken, walletInterceptor.validateAdminWallet, walletController.getWalletBalance);
 router.put('/adminWallet/updateWallet', verifyToken, walletInterceptor.validateAdminWallet, walletInterceptor.validateUpdateWallet, walletController.updateWallet);
+router.post('/adminWallet/transferToBank', verifyToken, walletInterceptor.validateAdminWallet, walletInterceptor.validateAdminTransferToBank, walletController.adminTransferToBank);
+router.post('/adminWallet/addFunds', verifyToken, walletInterceptor.validateAdminWallet, walletController.adminAddFunds);
+
+
 
 module.exports = router;

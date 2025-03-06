@@ -429,7 +429,7 @@ async function validateLogin(req, res) {
             httpOnly: true,
             secure: true,
             sameSite: 'None',
-            maxAge: 2 * 60 * 60 * 1000
+            maxAge: 7 * 24 * 60 * 60 * 1000
         });
         res.status(200).json({
             userId: user._id,
@@ -501,7 +501,7 @@ async function validateLoginGoogle(req, res) {
             httpOnly: true,
             secure: true,
             sameSite: 'None', // Allows cross-origin requests
-            maxAge: 2 * 60 * 60 * 1000
+            maxAge: 7 * 24 * 60 * 60 * 1000 
         });
         res.status(200).json({
             userId: user._id,
@@ -560,7 +560,7 @@ async function validateAdminLogin(req, res) {
             httpOnly: true,
             secure: true,
             sameSite: 'None',
-            maxAge: 2 * 60 * 60 * 1000
+            maxAge: 7 * 24 * 60 * 60 * 1000 
         });
         res.status(200).json({
             userId: user._id,

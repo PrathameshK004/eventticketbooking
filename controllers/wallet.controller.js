@@ -6,7 +6,9 @@ module.exports = {
     getWalletBalance: getWalletBalance,
     updateWallet: updateWallet,
     deleteWallet: deleteWallet,
-    transferToBank: transferToBank
+    transferToBank: transferToBank,
+    adminTransferToBank: adminTransferToBank,
+    adminAddFunds: adminAddFunds
 };
 
 // Get Wallet Balance
@@ -186,3 +188,84 @@ async function transferToBank(req, res) {
     }
 }
 
+
+async function adminTransferToBank(req, res) {
+    try {
+        const adminWalletId = process.env.ADMIN_WALLET_ID;
+        const { amount, bankAccount, ifscCode } = req.body;
+
+        if (!bankAccount || !ifscCode || amount) {
+            return res.status(400).json({ message: "Bank account details, IFSC code and Amount are required." });
+        }
+
+        // Fetch user wallet
+        let wallet = await Wallet.findById(adminWalletId);
+        if (!wallet || wallet.balance < amount) {
+            return res.status(400).json({ message: "Insufficient balance." });
+        }
+
+        // Deduct entire balance from wallet
+        wallet.balance -= amount;
+
+        // Add the debit transaction to the transactions array
+        wallet.transactions.push({
+            amount: amount,
+            type: 'Debit',
+            description: `Transfer to bank account ${bankAccount} and IFSC ${ifscCode}`,
+            date: new Date()
+        });
+
+        // Save the updated wallet
+        await wallet.save();
+
+        return res.status(200).json({
+            message: "Transfer successful."
+        });
+    } catch (error) {
+        console.error("Transfer error:", error);
+        res.status(500).json({ message: "Internal Server Error." });
+    }
+}
+
+async function adminAddFunds(req, res) {
+    try {
+        const adminWalletId = process.env.ADMIN_WALLET_ID;
+        const amount = req.body.amount;
+
+        if (!amount || amount <= 0) {
+            return res.status(400).json({ message: "Amount is required or must be positive." });
+        }
+
+        // Fetch admin wallet
+        let wallet = await Wallet.findById(adminWalletId);
+        if (!wallet) {
+            return res.status(400).json({ message: "Admin wallet not found." });
+        }
+
+        const timestamp = Math.floor(Date.now() / 1000); // Seconds since epoch
+        const randomNum = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
+        const transactionId = `TXN${timestamp}${randomNum}`;
+
+        // Credit the wallet
+        wallet.balance += amount;
+
+        // Add the credit transaction to the transactions array
+        wallet.transactions.push({
+            transactionId: transactionId,
+            amount: amount,
+            type: 'Credit',
+            description: `Funds added, transaction ID: ${transactionId}`,
+            date: new Date()
+        });
+
+        // Save the updated wallet
+        await wallet.save();
+
+        return res.status(200).json({
+            message: "Funds added successfully to wallet"
+        });
+    } catch (error) {
+        console.error("Funds adding error:", error);
+        res.status(500).json({ message: "Internal Server Error." });
+    }
+}

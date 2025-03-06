@@ -8,7 +8,8 @@ module.exports = {
     validateUserWallet,
     validateUpdateWallet,
     validateTransferToBank,
-    validateAdminWallet
+    validateAdminWallet,
+    validateAdminTransferToBank
 };
 
 // Validate that the user has a wallet and exists
@@ -128,6 +129,32 @@ async function validateTransferToBank(req, res, next) {
     // Check if ifscCode is provided and matches the regex
     if (!ifscCode || !ifscCodeRegex.test(ifscCode)) {
         return res.status(400).json({ message: "Invalid IFSC code." });
+    }
+
+    next();
+}
+
+async function validateAdminTransferToBank(req, res, next) {
+    const { amount, bankAccount, ifscCode } = req.body;
+
+    // Bank account regex: Only numbers, 9 to 18 digits long
+    const bankAccountRegex = /^[0-9]{9,18}$/;
+
+    // IFSC code regex: 4 alphabets, followed by a 0, and then 6 digits
+    const ifscCodeRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+
+    // Check if bankAccount is provided and matches the regex
+    if (!bankAccount || !bankAccountRegex.test(bankAccount)) {
+        return res.status(400).json({ message: "Invalid bank account details." });
+    }
+
+    // Check if ifscCode is provided and matches the regex
+    if (!ifscCode || !ifscCodeRegex.test(ifscCode)) {
+        return res.status(400).json({ message: "Invalid IFSC code." });
+    }
+
+    if (!amount || amount<=0) {
+        return res.status(400).json({ message: "Amount is required or must be positive." });
     }
 
     next();
