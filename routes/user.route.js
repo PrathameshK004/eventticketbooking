@@ -33,7 +33,7 @@ router.post('/removeAdmin/:userId',verifyToken, userInterceptor.validateAdmin, u
 router.get('/checkPendingOrgRequest/:userId', verifyToken, userInterceptor.validateUserId, usersController.checkPendingOrgReq);
 router.get('/checkPendingOrgRequest/:userId', verifyToken, userInterceptor.validateUserId, usersController.checkPendingOrgReq);
 router.get('/checkRemoveOrganizer/:userId', verifyToken, userInterceptor.validateUserId, usersController.checkRemoveOrg);
-router.post('/removeOrg/:userId',verifyToken, adminNotificationInterceptor.validateAdmin, userInterceptor.validateUserId, usersController.removeOrg);
+router.get('/removeOrg/:userId', verifyToken, adminNotificationInterceptor.validateAdmin, userInterceptor.validateUserId, usersController.removeOrg);
 
 module.exports = router;
 
