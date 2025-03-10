@@ -130,13 +130,17 @@ async function updateAdminNotification(req, res) {
                 }
                 await notificationController.sendNotification("event", `${event.eventTitle} is Rejected`, `Your event ${event.eventTitle} is Declined.`, event.userId)
                 const eventDel = await Event.findByIdAndDelete(noti.eventDetails);
-                user.eventId = user.eventId.filter(event => event !== noti.eventDetails);//remove the eventId from user eventId
+                await User.updateOne(
+                    { _id: user._id },  // Match the specific user by userId
+                    { $pull: { eventId: eventDel._id } } // Remove the eventId from the array
+                );
+                
                 if (eventDel.fileId) {
                     await bucket.delete(new ObjectId(eventDel.fileId));
                 }
             }
             catch (err) {
-                console.error("Failed to create notification:", err);
+                console.error("Failed to update notification:", err);
             }
 
 
