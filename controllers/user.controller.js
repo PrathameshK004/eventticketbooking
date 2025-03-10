@@ -143,7 +143,7 @@ async function getAllUsers(req, res) {
             };
         }));
 
-        res.status(200).json({ updatedUsers });
+        res.status(200).json(updatedUsers);
 
     } catch (err) {
         console.error("Error fetching users:", err.message);
