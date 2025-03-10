@@ -124,12 +124,33 @@ async function sendOTP(req, res) {
 
 function getAllUsers(req, res) {
     User.find({ isTemp: false })
-        .then(users => res.status(200).json(users))
+        .then(users => {
+            if (!users || users.length === 0) {
+                return res.status(200).json({ success: false, message: "No users found." });
+            }
+
+            const responseUsers = users.map(user => {
+                const isOrganizer = user.roles.includes(1);
+                if (!isOrganizer) {
+                    return { ...user.toObject(), success: false, message: "User is not an Organizer." };
+                }
+
+                const hasEvents = user.events && user.events.length > 0;
+                return {
+                    ...user.toObject(),
+                    success: hasEvents ? false : true,
+                    message: hasEvents ? "Events found for this organizer." : "No events found for this organizer."
+                };
+            });
+
+            return res.status(200).json(responseUsers);
+        })
         .catch(err => {
             console.error("Error fetching users:", err.message);
-            res.status(500).json({ error: 'Failed to fetch users' });
+            res.status(500).json({ success: false, error: "Failed to fetch users" });
         });
 }
+
 
 
 async function getRoles(req, res) {
@@ -718,18 +739,18 @@ async function checkRemoveOrg(req, res) {
         const user = await User.findById(userId);
 
         if (!user.roles.includes(1)) {
-            return res.status(200).json({ success: false, message: "User is not an Organizer." });
+            return res.status(200).json({ isOrg: false, hasEvent: false, message: "User is not an Organizer." });
         }
 
         if (events.length <= 0 && user.roles.includes(1)) {
-            return res.status(200).json({ success: true, message: "No events found for this organizer." });
+            return res.status(200).json({ isOrg: true, hasEvent: false, message: "No events found for this organizer." });
         }
 
-        return res.status(200).json({ success: false, message: "Events found for this organizer." });
+        return res.status(200).json({ isOrg: true, hasEvent: true, message: "Events found for this organizer." });
 
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ success: false, message: "Server error occurred." });
+        return res.status(500).json({ isOrg: false, hasEvent: false, message: "Server error occurred." });
     }
 }
 

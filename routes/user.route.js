@@ -6,7 +6,7 @@ let userInterceptor = require('../interceptor/user.interceptor');
 let adminNotificationInterceptor = require('../interceptor/adminNotification.interceptor');
 let verifyToken = require('../interceptor/auth.interceptor');
 
-router.get('/allUsers', verifyToken, usersController.getAllUsers);
+router.get('/allUsers', verifyToken, adminNotificationInterceptor.validateAdmin, usersController.getAllUsers);
 router.get('/checkAuth', verifyToken, (req, res) => {
     res.status(200).json({ isAuthenticated: true, userKey: req.userKey});
 });
