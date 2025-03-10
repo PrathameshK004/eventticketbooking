@@ -57,14 +57,14 @@ async function deleteEnquiry(req, res) {
         const { enquiryId } = req.params;
 
         const enquiry = await Enquiry.findById(enquiryId);
-        if(!enquiry){
+        if (!enquiry) {
             return res.status(404).json({ message: 'Enquiry not found' });
         }
 
-        if(enquiry.type === "Organizer Request" && enquiry.status === "Pending"){
+        if (enquiry.type === "Organizer Request" && enquiry.status === "Pending") {
             if (enquiry.fileId) {
                 await bucket.delete(new ObjectId(enquiry.fileId));
-            }    
+            }
         }
 
         const deletedEnquiry = await Enquiry.findByIdAndDelete(enquiryId);
@@ -311,6 +311,29 @@ async function respondToEnquiry(req, res) {
 
         }
 
+        if (status === "Accepted" && enquiry.type === "Give Up Organizer Request") {
+
+            const user = await User.findById(enquiry.userId);
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            if (!user.roles.includes(1)) {
+                return res.status(403).json({ message: 'The User is already NOT an Organizer' })
+            }
+
+            user.roles.pull(1);
+            await user.save();
+
+            try {
+                await notificationController.sendNotification("enquiry", "Request Approved", "Your request for enquiry Give Up Organizer has been accepted, Now you are not an Organizer", enquiry.userId)
+            }
+            catch (err) {
+                console.error("Failed to create notification:", err);
+            }
+
+        }
+
         if (status === "Rejected") {
 
             const user = await User.findById(enquiry.userId);
@@ -331,7 +354,7 @@ async function respondToEnquiry(req, res) {
         // Update the enquiry status
         enquiry.status = status;
         enquiry.remarks = remarks;
-        
+
         const enqDel = await Enquiry.findById(enquiry._id);
         if (enqDel.fileId) {
             await bucket.delete(new ObjectId(enqDel.fileId));

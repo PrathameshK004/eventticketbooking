@@ -35,7 +35,9 @@ module.exports = {
     removeAdmin,
     getRoles,
     getHoldBalance,
-    checkPendingOrgReq
+    checkPendingOrgReq,
+    checkRemoveOrg,
+    removeOrg
 };
 
 function isUuidValid(userId) {
@@ -506,7 +508,7 @@ async function validateLoginGoogle(req, res) {
             httpOnly: true,
             secure: true,
             sameSite: 'None', // Allows cross-origin requests
-            maxAge: 7 * 24 * 60 * 60 * 1000 
+            maxAge: 7 * 24 * 60 * 60 * 1000
         });
         res.status(200).json({
             userId: user._id,
@@ -565,7 +567,7 @@ async function validateAdminLogin(req, res) {
             httpOnly: true,
             secure: true,
             sameSite: 'None',
-            maxAge: 2 * 24 * 60 * 60 * 1000 
+            maxAge: 2 * 24 * 60 * 60 * 1000
         });
         res.status(200).json({
             userId: user._id,
@@ -641,7 +643,7 @@ async function removeAdmin(req, res) {
         }
 
         if (!user.roles.includes(2)) {
-            return res.status(400).json({ message: 'The User is already NOT an Admin' });
+            return res.status(403).json({ message: 'The User is already NOT an Admin' });
         }
 
         user.roles.pull(2);
@@ -708,3 +710,56 @@ async function checkPendingOrgReq(req, res) {
     }
 }
 
+async function checkRemoveOrg(req, res) {
+    const userId = req.params.userId;
+    try {
+        const events = await Event.find({ userId: userId }); // Filter events by userId (organizer)
+
+        const user = await User.findById(userId);
+
+        if (!user.roles.includes(1)) {
+            return res.status(200).json({ success: false, message: "User is not an Organizer." });
+        }
+
+        if (events.length <= 0 && user.roles.includes(1)) {
+            return res.status(200).json({ success: true, message: "No events found for this organizer." });
+        }
+
+        return res.status(200).json({ success: false, message: "Events found for this organizer." });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ success: false, message: "Server error occurred." });
+    }
+}
+
+async function removeOrg(req, res) {
+    const userId = req.params.userId;
+
+    try {
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (Array.isArray(user.eventId) && user.eventId.length > 0) {
+            return res.status(400).json({ message: 'User has events, cannot change the role' });
+        }
+
+        if (!user.roles.includes(1)) {
+            return res.status(403).json({ message: 'User is not an Organizer' });
+        }
+
+        user.roles.pull(1);
+
+        await user.save();
+
+        return res.status(200).json({ message: 'User has been successfully updated and removed as Organizer' });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error, please try again later' });
+    }
+}

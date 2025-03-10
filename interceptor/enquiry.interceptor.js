@@ -76,8 +76,8 @@ async function validateNewEnquiry(req, res, next) {
         return res.status(400).json({ error: 'User ID must be a valid UUID string.' });
     }
 
-    if (!type || !['Event Request', 'Other'].includes(type)) {
-        return res.status(400).json({ error: 'Type is required and must be either Event Request or Other' });
+    if (!type || !['Event Request', 'Other', 'Give Up Organizer Request'].includes(type)) {
+        return res.status(400).json({ error: 'Type is required and must be either Event Request, Give Up Organizer Request or Other' });
     }
 
 
@@ -88,6 +88,9 @@ async function validateNewEnquiry(req, res, next) {
         }
         if (type === 'Event Request' && !userExists.roles.includes(1)) {
             return res.status(400).json({ error: 'You are not Organizer to Request Add Event' });
+        }
+        if (type === 'Give Up Organizer Request' && !userExists.roles.includes(1)) {
+            return res.status(400).json({ error: 'You are not Organizer to Request Give Up Request' });
         }
     } catch (error) {
         return res.status(500).json({ error: 'An error occurred while validating the user ID. ' + error });

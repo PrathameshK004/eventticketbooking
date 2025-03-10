@@ -3,6 +3,7 @@ let express = require("express");
 let router = express.Router();
 let usersController = require('../controllers/user.controller');
 let userInterceptor = require('../interceptor/user.interceptor');
+let adminNotificationInterceptor = require('../interceptor/adminNotification.interceptor');
 let verifyToken = require('../interceptor/auth.interceptor');
 
 router.get('/allUsers', verifyToken, usersController.getAllUsers);
@@ -30,6 +31,9 @@ router.post('/login/admin', userInterceptor.checkAdminLogin, usersController.val
 router.post('/makeAdmin/:userId',verifyToken, userInterceptor.validateAdmin, usersController.makeAdmin);
 router.post('/removeAdmin/:userId',verifyToken, userInterceptor.validateAdmin, usersController.removeAdmin);
 router.get('/checkPendingOrgRequest/:userId', verifyToken, userInterceptor.validateUserId, usersController.checkPendingOrgReq);
+router.get('/checkPendingOrgRequest/:userId', verifyToken, userInterceptor.validateUserId, usersController.checkPendingOrgReq);
+router.get('/checkRemoveOrganizer/:userId', verifyToken, userInterceptor.validateUserId, usersController.checkRemoveOrg);
+router.post('/removeOrg/:userId',verifyToken, adminNotificationInterceptor.validateAdmin, userInterceptor.validateUserId, usersController.removeOrg);
 
 module.exports = router;
 
