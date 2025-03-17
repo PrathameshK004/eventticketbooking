@@ -34,6 +34,7 @@ router.get('/checkPendingOrgRequest/:userId', verifyToken, userInterceptor.valid
 router.get('/checkPendingOrgRequest/:userId', verifyToken, userInterceptor.validateUserId, usersController.checkPendingOrgReq);
 router.get('/checkRemoveOrganizer/:userId', verifyToken, userInterceptor.validateUserId, usersController.checkRemoveOrg);
 router.get('/removeOrg/:userId', verifyToken, adminNotificationInterceptor.validateAdmin, userInterceptor.validateUserId, usersController.removeOrg);
+router.get('/getOrganizers', verifyToken, adminNotificationInterceptor.validateAdmin, usersController.getOrgs);
 
 module.exports = router;
 

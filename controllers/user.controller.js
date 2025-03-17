@@ -37,7 +37,8 @@ module.exports = {
     getHoldBalance,
     checkPendingOrgReq,
     checkRemoveOrg,
-    removeOrg
+    removeOrg,
+    getOrgs
 };
 
 function isUuidValid(userId) {
@@ -783,5 +784,35 @@ async function removeOrg(req, res) {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Server error, please try again later' });
+    }
+}
+
+
+async function getOrgs(req, res) {
+    try {
+        const searchQuery = req.query.search;
+
+        const query = { roles: { $in: [1] } };
+
+        if (!searchQuery) {
+            const users = await User.find(query, { userName: 1, emailID: 1, _id: 0 });
+            return res.json(users);
+        }
+
+        if (searchQuery.trim().length < 3) {
+            return res.status(400).json({ message: 'Search query must be at least 3 characters' });
+        }
+
+        query.$or = [
+            { userName: { $regex: searchQuery, $options: 'i' } },
+            { emailID: { $regex: searchQuery, $options: 'i' } }
+        ];
+
+        const users = await User.find(query, { userName: 1, emailID: 1, _id: 0 });
+
+        res.json(users);
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 }
