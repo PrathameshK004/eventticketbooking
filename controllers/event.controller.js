@@ -283,7 +283,7 @@ function getEventsOfOrg(req, res) {
                 return res.status(403).json({ message: 'You are not authorized to add an event. You are not an Admin.' });
             }
 
-            const uid = await User.find({emailID: req.body.eventOrg});
+            const uid = await User.findOne({ emailID: req.body.eventOrg });
             if (!uid || uid.isTemp) {
                 return res.status(404).json({ message: "User not found" });
             }
