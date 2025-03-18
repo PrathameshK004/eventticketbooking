@@ -271,7 +271,10 @@ function getEventsOfOrg(req, res) {
                 return res.status(401).json({ message: 'No token provided' });
             }
 
-            const userDetail = await User.find({ emailID: req.body.eventOrg });
+            const decoded = jwt.verify(token, process.env.JWTSecret);
+            const userId = decoded.key;
+
+            const userDetail = await User.findById(userId);
             if (!userDetail || userDetail.isTemp) {
                 return res.status(404).json({ message: "User not found" });
             }
@@ -280,7 +283,10 @@ function getEventsOfOrg(req, res) {
                 return res.status(403).json({ message: 'You are not authorized to add an event. You are not an Admin.' });
             }
 
-
+            const uid = await User.find({emailID: req.body.eventOrg});
+            if (!uid || uid.isTemp) {
+                return res.status(404).json({ message: "User not found" });
+            }
             let eventFeatures = req.body.eventFeatures || [];
             let eventTags = req.body.eventTags || [];
 
@@ -301,7 +307,7 @@ function getEventsOfOrg(req, res) {
                 eventOrgInsta: req.body.eventOrgInsta,
                 eventOrgX: req.body.eventOrgX,
                 eventOrgFacebook: req.body.eventOrgFacebook,
-                userId: userDetail._id.toString(),
+                userId: uid._id.toString(),
                 approveDate: Date.now()
             };
 
@@ -345,7 +351,7 @@ function getEventsOfOrg(req, res) {
                     const savedEvent = await newEvent.save();
 
                     await User.findByIdAndUpdate(
-                        userDetail._id.toString(),
+                        uid._id.toString(),
                         { $push: { eventId: savedEvent._id } }, // Push the eventId into the user's eventId array
                         { new: true } // Return the updated user document
                     );
