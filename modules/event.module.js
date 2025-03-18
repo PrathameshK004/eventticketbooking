@@ -9,7 +9,6 @@ const eventSchema = new mongoose.Schema({
     imageUrl: { type: String },
     eventDescription: { type: String, required: true, trim: true },
     eventLanguage: { type: String, required: true, trim: true },
-    eventRating: { type: Number, min: 0, max: 5 },
     eventCapacity: { type: Number, required: true },
     totalEventCapacity: { type: Number },
     eventType: { type: String, required: true},

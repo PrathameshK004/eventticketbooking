@@ -799,10 +799,6 @@ async function getOrgs(req, res) {
             return res.json(users);
         }
 
-        if (searchQuery.trim().length < 3) {
-            return res.status(400).json({ message: 'Search query must be at least 3 characters' });
-        }
-
         query.$or = [
             { userName: { $regex: searchQuery, $options: 'i' } },
             { emailID: { $regex: searchQuery, $options: 'i' } }

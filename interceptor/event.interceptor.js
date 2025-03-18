@@ -73,10 +73,6 @@ function validateEventData(eventData, isUpdate = false, requiresEventOrg = false
     });
   }
 
-  if (eventData.eventRating !== undefined && (eventData.eventRating < 0 || eventData.eventRating > 5)) {
-    errors.push('Event rating must be between 0 and 5.');
-  }
-
   if (eventData.eventCapacity !== undefined && eventData.eventCapacity < 1) {
     errors.push('Event capacity cannot be less than 1.');
   }
