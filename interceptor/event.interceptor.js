@@ -56,10 +56,14 @@ function validateEventId(req, res, next) {
   next();
 }
 
-function validateEventData(eventData, isUpdate = false) {
+function validateEventData(eventData, isUpdate = false, requiresEventOrg = false) {
   const errors = [];
 
-  const requiredFields = ['eventTitle', 'eventDate', 'eventAddress', 'eventOrganizer', 'eventPrice', 'eventLanguage', 'eventDescription', 'eventTime', 'eventType', 'eventCapacity', 'eventOrg'];
+  const requiredFields = ['eventTitle', 'eventDate', 'eventAddress', 'eventOrganizer', 'eventPrice', 'eventLanguage', 'eventDescription', 'eventTime', 'eventType', 'eventCapacity'];
+
+  if (requiresEventOrg) {
+    requiredFields.push('eventOrg'); // Make eventOrg required only for token-based requests
+  }
 
   if (!isUpdate) {
     requiredFields.forEach(field => {
@@ -124,7 +128,9 @@ async function checkExistingEvent(eventData, excludeId = null) {
 
 async function validateNewEvent(req, res, next) {
   const eventData = req.body;
-  const errors = validateEventData(eventData);
+  const requiresEventOrg = !req.params.token; // True if token is NOT present in the request
+
+  const errors = validateEventData(eventData, false, requiresEventOrg);
 
   if (errors.length > 0) {
     return res.status(400).json({ errors });
