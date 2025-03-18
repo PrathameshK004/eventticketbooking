@@ -59,7 +59,7 @@ function validateEventId(req, res, next) {
 function validateEventData(eventData, isUpdate = false) {
   const errors = [];
 
-  const requiredFields = ['eventTitle', 'eventDate', 'eventAddress', 'eventOrganizer', 'eventPrice', 'eventLanguage', 'eventDescription', 'eventTime', 'eventType', 'eventCapacity'];
+  const requiredFields = ['eventTitle', 'eventDate', 'eventAddress', 'eventOrganizer', 'eventPrice', 'eventLanguage', 'eventDescription', 'eventTime', 'eventType', 'eventCapacity', 'eventOrg'];
 
   if (!isUpdate) {
     requiredFields.forEach(field => {

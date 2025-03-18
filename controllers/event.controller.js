@@ -271,10 +271,7 @@ function getEventsOfOrg(req, res) {
                 return res.status(401).json({ message: 'No token provided' });
             }
 
-            const decoded = jwt.verify(token, process.env.JWTSecret);
-            const userId = decoded.key;
-
-            const userDetail = await User.findById(userId);
+            const userDetail = await User.find({ emailID: req.body.eventOrg });
             if (!userDetail || userDetail.isTemp) {
                 return res.status(404).json({ message: "User not found" });
             }
@@ -304,7 +301,7 @@ function getEventsOfOrg(req, res) {
                 eventOrgInsta: req.body.eventOrgInsta,
                 eventOrgX: req.body.eventOrgX,
                 eventOrgFacebook: req.body.eventOrgFacebook,
-                userId: userId,
+                userId: userDetail._id.toString(),
                 approveDate: Date.now()
             };
 
@@ -348,7 +345,7 @@ function getEventsOfOrg(req, res) {
                     const savedEvent = await newEvent.save();
 
                     await User.findByIdAndUpdate(
-                        userId,
+                        userDetail._id.toString(),
                         { $push: { eventId: savedEvent._id } }, // Push the eventId into the user's eventId array
                         { new: true } // Return the updated user document
                     );
