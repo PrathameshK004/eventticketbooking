@@ -15,7 +15,8 @@ const userSchema = new mongoose.Schema({
     eventId: { type: [ String ] },
     code: { type: String }, // Changed to String
     codeExpiry: { type: Date }, // OTP Expiry
-    lastRewardDate: { type: Date }
+    lastRewardDate: { type: Date },
+    eventRating: { type: Number, min: 0, max: 5, default: 0 }
 });
 
 userSchema.pre('save', function (next) {
