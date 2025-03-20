@@ -9,6 +9,7 @@ const enquiryRoutes = require("./enquiry.route");
 const couponsRoutes = require("./coupon.route");
 const rewardsRoutes = require("./reward.route");
 const reportRoutes = require("./orgReport.route");
+const feedbackRoutes = require("./feedback.route");
 const router = express.Router();
 
 
@@ -22,5 +23,6 @@ router.use('/enquiry',enquiryRoutes);
 router.use('/coupons',couponsRoutes);
 router.use('/rewards',rewardsRoutes);
 router.use('/reports',reportRoutes);
+router.use('/feedback',feedbackRoutes);
 
 module.exports=router;

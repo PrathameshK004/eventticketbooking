@@ -135,7 +135,7 @@ async function redeemAllRewards(req, res) {
         const currentDate = new Date();
 
         // Find all unredeemed rewards
-        const rewards = await Reward.find({ userId, isRedeemed: false }).session(session);
+        const rewards = await Reward.find({ userId, isRedeemed: false, isRevealed: true }).session(session);
 
         if (!rewards.length) {
             await session.abortTransaction();
@@ -213,7 +213,7 @@ async function redeemAllRewards(req, res) {
         // Mark valid rewards as redeemed
         await Reward.updateMany(
             { _id: { $in: validRewards.map(r => r._id) } },
-            { $set: { isRevealed: true, isRedeemed: true } }, // Updating both fields
+            { $set: { isRedeemed: true } }, // Updating both fields
             { session }
         );
 
@@ -261,7 +261,7 @@ async function checkRewardsToRedeem(req, res) {
     try {
         const userId = req.params.userId;
 
-        const count = await Reward.countDocuments({ userId, isRedeemed: false, type: 'win' });
+        const count = await Reward.countDocuments({ userId, isRedeemed: false, isRevealed: true, type: 'win' });
 
         if (count <= 0) {
             return res.status(400).json({ success: false, message: 'No rewards to redeem' });
