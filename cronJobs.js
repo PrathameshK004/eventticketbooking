@@ -1,8 +1,10 @@
 const cron = require('node-cron');
 const mongoose = require('mongoose');
 const { GridFSBucket } = require('mongodb');
+const nodemailer = require('nodemailer');
 const moment = require('moment');
 const ObjectId = require('mongoose').Types.ObjectId;
+const jwt = require('jsonwebtoken');
 const AdminNotification = require('./modules/adminNotification.module.js'); // 10 days old
 const Event = require('./modules/event.module.js'); // isLive to false with startTime and delete 1 month
 const User = require('./modules/user.module.js');
@@ -12,6 +14,8 @@ const Notification = require('./modules/notification.module.js'); // 10 days old
 const Token = require('./modules/token.module.js'); // If expired
 const Coupon = require('./modules/coupon.module.js'); // If expired
 const Reward = require('./modules/reward.module.js'); // If expired
+const Booking = require('./modules/bookingdetails.module.js'); // If expired
+const Feedback = require('./modules/feedback.module.js'); // If expired
 
 // Initialize GridFSBuckets for different collections
 let eventBucket, enquiryBucket;
@@ -21,6 +25,13 @@ conn.once('open', () => {
     eventBucket = new GridFSBucket(conn.db, { bucketName: 'uploads' }); // For event files
     enquiryBucket = new GridFSBucket(conn.db, { bucketName: 'enquiryUploads' }); // For enquiry files
 });
+
+const createToken = (key) => {
+    return jwt.sign({ key }, process.env.JWTSecret, {
+        expiresIn: '30d' // Token expires in 30 days
+    });
+};
+
 
 // Function to delete expired tokens
 async function deleteExpiredTokens() {
@@ -69,10 +80,10 @@ async function updateLoseRewards() {
 async function deletePastEvents() {
     try {
         const pastEvents = await Event.find(); // Fetch all events
-        
+
         // Current time in UTC
         const nowUTC = new Date();
-        
+
         // Convert to IST by adding 5 hours and 30 minutes
         const nowIST = new Date(nowUTC.getTime() + (5.5 * 60 * 60 * 1000));
 
@@ -92,14 +103,14 @@ async function deletePastEvents() {
 
             // Parse dates in IST context
             const eventDateStr = moment(event.eventDate).format('YYYY-MM-DD');
-            
+
             // Create moment objects for start time
             const eventStartMoment = moment(`${eventDateStr} ${startTimeStr}`, 'YYYY-MM-DD hh:mm A');
-            
+
             // Check if end time is in AM and start time is in PM, indicating overnight event
             const isStartPM = startTimeStr.includes('PM');
             const isEndAM = endTimeStr.includes('AM');
-            
+
             // For end time, determine if we need to add a day
             let eventEndMoment;
             if (isStartPM && isEndAM) {
@@ -110,15 +121,15 @@ async function deletePastEvents() {
                 // Same day event
                 eventEndMoment = moment(`${eventDateStr} ${endTimeStr}`, 'YYYY-MM-DD hh:mm A');
             }
-            
+
             if (!eventStartMoment.isValid() || !eventEndMoment.isValid()) {
                 continue;
             }
-            
+
             // Convert moment objects to Date objects
             const eventFullDateStartTime = eventStartMoment.toDate();
             const eventFullDateEndTime = eventEndMoment.toDate();
-            
+
             // Compare using IST times
             const startPassed = eventFullDateStartTime <= nowIST;
 
@@ -132,13 +143,13 @@ async function deletePastEvents() {
             // Process hold amount refund logic - also using IST time
             if (!event.isLive && eventFullDateEndTime <= nowIST && event.holdAmount > 0) {
                 const refundAmount = event.holdAmount;
-                
+
                 let wallet = await Wallet.findOne({ userId: event.userId });
                 if (!wallet) {
                     console.error(`  Wallet not found for user ${event.userId}`);
                     continue;
                 }
-                
+
                 // Record transaction in wallet
                 wallet.balance += refundAmount;
                 wallet.transactions.push({
@@ -152,13 +163,37 @@ async function deletePastEvents() {
                 await event.save();
             }
 
+
+            if (eventFullDateEndTime <= nowIST) {
+                const bookings = await Booking.find({ eventId: event._id, book_status: "Completed" });
+
+                for (const booking of bookings) {
+                    const existingFeedback = await Feedback.findOne({ bookingId: booking._id });
+
+                    if (!existingFeedback) {
+                        await Feedback.create({
+                            bookingId: booking._id,
+                            eventId: event._id,
+                            userId: booking.userId,
+                            status: 'Pending',
+                        });
+
+                        const user = await User.findById(booking.userId);
+                        if (user && user.emailID) {
+                            await sendFeedbackEmail(user.emailID, event.eventTitle, event.imageUrl, booking._id.toString(), user._id);
+                            console.log(`Sent feedback email to ${user.emailID}`);
+                        }
+                    }
+                }
+            }
+
             // Add 30 days (1 month) to the event date for deletion threshold - in IST
             const deletionThreshold = moment(eventFullDateStartTime).add(30, 'days').toDate();
 
             // Check if the event is now older than 30 days after end time - in IST
             if (deletionThreshold < nowIST) {
                 console.log(`  Deleting event ${event._id}`);
-                
+
                 // Delete associated files
                 if (event.fileId) {
                     try {
@@ -172,7 +207,7 @@ async function deletePastEvents() {
                 // Remove event references from User collection
                 try {
                     const userUpdateResult = await User.updateMany(
-                        { eventId: event._id }, 
+                        { eventId: event._id },
                         { $pull: { eventId: event._id } }
                     );
                     console.log(`  Updated ${userUpdateResult.nModified} users`);
@@ -213,6 +248,89 @@ async function deletePastEvents() {
         console.error('Error in deletePastEvents function:', err);
     }
 }
+
+async function sendFeedbackEmail(userEmail, eventTitle, eventImageUrl, bookingId, userId) {
+    try {
+        // Create auth token for secure feedback submission
+        const token = createToken(userId);
+        await Token.create({
+            token,
+            userId: userId,
+            used: false,
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+        });
+        
+        // Set up email transporter
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL,
+                pass: process.env.EMAIL_PASSWORD,
+            },
+        });
+        
+        // Generate star rating links with direct API calls
+        const stars = [1, 2, 3, 4, 5]
+            .map(
+                (rating) =>
+                    `<a href="https://eventticketbooking-cy6o.onrender.com/api/feedback/giveFeedback/${bookingId}/${rating}/${token}" 
+                        style="font-size: 30px; color: gold; text-decoration: none; margin: 0 5px;"
+                        target="_blank" 
+                        title="Rate ${rating} stars">★</a>`
+            )
+            .join('');
+
+        const mailOptions = {
+            from: process.env.EMAIL,
+            to: userEmail,
+            subject: `Rate Your Experience: ${eventTitle}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 5px; overflow: hidden;">
+                    <div style="background-color: #7B68EE; color: white; padding: 20px; text-align: center;">
+                        <h1 style="margin: 0;">We Value Your Feedback!</h1>
+                    </div>
+                    
+                    <div style="padding: 20px;">
+                        <p>Dear Attendee,</p>
+                        
+                        <p>Thank you for attending <strong>${eventTitle}</strong>! We would love to hear your thoughts about your experience.</p>
+                        
+                        ${eventImageUrl ? `<div style="text-align: center; margin: 20px 0;">
+                            <img src="${eventImageUrl}" alt="${eventTitle}" style="max-width: 100%; max-height: 200px; object-fit: cover; border-radius: 5px;">
+                        </div>` : ''}
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <p style="margin-bottom: 15px; font-size: 16px;"><strong>Click a star to rate your experience:</strong></p>
+                            <div style="font-size: 30px;">
+                                ${stars}
+                            </div>
+                            <p style="font-size: 12px; color: #777; margin-top: 10px;">
+                                (Rating is submitted immediately when you click a star)
+                            </p>
+                        </div>
+                        
+                        <p style="color: #555;">Your feedback helps us improve future events. We appreciate your time!</p>
+                        
+                        <p style="margin-top: 30px;">
+                            Best Regards,<br>
+                            EventHorizon Team
+                        </p>
+                    </div>
+                    
+                    <div style="background-color: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #777;">
+                        This is an autogenerated message. Please do not reply to this email.
+                    </div>
+                </div>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`Feedback email sent to ${userEmail}`);
+    } catch (error) {
+        console.error(`Error sending feedback email to ${userEmail}:`, error);
+    }
+}
+
 
 
 // Function to delete old enquiries (older than 1 month)
