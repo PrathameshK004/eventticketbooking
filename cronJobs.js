@@ -180,7 +180,7 @@ async function deletePastEvents() {
 
                         const user = await User.findById(booking.userId);
                         if (user && user.emailID) {
-                            await sendFeedbackEmail(user.emailID, event.eventTitle, event.imageUrl, booking._id.toString(), user._id);
+                            await sendFeedbackEmail(user.emailID, event.eventTitle, event.imageUrl, booking._id.toString(), user._id, user.userName);
                             console.log(`Sent feedback email to ${user.emailID}`);
                         }
                     }
@@ -249,7 +249,7 @@ async function deletePastEvents() {
     }
 }
 
-async function sendFeedbackEmail(userEmail, eventTitle, eventImageUrl, bookingId, userId) {
+async function sendFeedbackEmail(userEmail, eventTitle, eventImageUrl, bookingId, userId, username) {
     try {
         // Create auth token for secure feedback submission
         const token = createToken(userId);
@@ -295,7 +295,7 @@ async function sendFeedbackEmail(userEmail, eventTitle, eventImageUrl, bookingId
             
                         <!-- Feedback Request -->
                         <div style="background-color: #ffffff; padding: 20px; border-radius: 0 0 8px 8px;">
-                            <p style="font-size: 16px;">Dear Attendee,</p>
+                            <p style="font-size: 16px;">Dear ${username},</p>
                             <p>Thank you for attending <strong>${eventTitle}</strong>! We would love to hear your thoughts about your experience.</p>
             
                             ${eventImageUrl ? `<div style="text-align: center; margin: 20px 0;">
