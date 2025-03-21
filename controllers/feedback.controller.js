@@ -1,6 +1,7 @@
 const Feedback = require("../modules/feedback.module.js");
 const Token = require("../modules/token.module.js");
 const User = require("../modules/user.module.js");
+const Event = require("../modules/event.module.js");
 const Booking = require("../modules/bookingdetails.module.js");
 
 module.exports = {
@@ -61,7 +62,8 @@ async function giveFeedback(req, res) {
     await feedback.save();
 
     let booking = await Booking.findById(bookingId);
-    let user = await User.findById(booking.userId);
+    let event = await Event.findById(booking.eventId);
+    let user = await User.findById(event.userId);
 
     if (user.eventRating === 0) {
       user.eventRating = parsedRating;
