@@ -63,6 +63,21 @@ async function deleteExpiredRewards() {
     }
 }
 
+// Function to delete expired feedbacks
+async function deleteExpiredFeedbacks() {
+    try {
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() - 30); // Set to 30 days ago
+
+        const result = await Feedback.deleteMany({ createdAt: { $lt: expirationDate } });
+
+        console.log(`Deleted expired feedbacks: ${result.deletedCount}`);
+    } catch (err) {
+        console.error('Error deleting expired feedbacks:', err);
+    }
+}
+
+
 // Function to update lose rewards
 async function updateLoseRewards() {
     try {
@@ -378,6 +393,7 @@ async function scheduleDataDeletion() {
     await deleteOldNotifications();
     await deleteExpiredCoupons();
     await deleteExpiredRewards();
+    await deleteExpiredFeedbacks();
     await updateLoseRewards();
 }
 
