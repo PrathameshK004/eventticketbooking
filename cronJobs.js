@@ -288,7 +288,7 @@ async function sendFeedbackEmail(userEmail, eventTitle, eventImageUrl, bookingId
         const stars = [1, 2, 3, 4, 5]
             .map(
                 (rating) =>
-                    `<a href="https://eventticketbooking-cy6o.onrender.com/api/feedback/giveFeedback/${bookingId}/${rating}/${token}" 
+                    `<a href="https://eventhorizondashboard.web.app/feedback?bid=${bookingId}&rating=${rating}&token=${token}" 
                         style="font-size: 30px; color: gold; text-decoration: none; margin: 0 5px;"
                         target="_blank" 
                         title="Rate ${rating} stars">★</a>`
