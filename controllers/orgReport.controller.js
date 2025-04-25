@@ -36,7 +36,7 @@ async function generateReport(eventId) {
     doc.on("end", () => { });
 
     // Download logo
-    const logoUrl = "https://i.imgur.com/sx36L2V.png";
+    const logoUrl = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-YMQdunQXCJrjhEHRm8eBoVkVOBxAoR.png";
     let logoBuffer;
     try {
         const response = await axios.get(logoUrl, { responseType: "arraybuffer" });
