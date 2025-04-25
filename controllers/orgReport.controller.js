@@ -330,7 +330,7 @@ async function sendReport(req, res) {
                             </tr>
                             <tr>
                                 <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Total Revenue:</strong></td>
-                                <td style="padding: 8px; border-bottom: 1px solid #ddd;">Rs. ${event.totalAmount ?? 0}</td>
+                                <td style="padding: 8px; border-bottom: 1px solid #ddd;">Rs. ${(event.totalAmount ?? 0).toFixed(2)}</td>
                             </tr>
                         </table>
         
