@@ -70,19 +70,13 @@ async function sendOTP(req, res) {
         // Nodemailer Transporter Setup
 
         const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,              // use TLS (more reliable than SSL 465)
-        secure: false,          // true for port 465, false for 587
-        auth: {
-            user: process.env.EMAIL,          // your Gmail
-            pass: process.env.EMAIL_PASSWORD  // your App Password
-        },
-        tls: {
-            rejectUnauthorized: false         // ignore self-signed certs
-        },
-        connectionTimeout: 20000,           // wait 20s before timing out
-        greetingTimeout: 10000,
-        socketTimeout: 20000
+            host: "in-v3.mailjet.com",
+            port: 587,
+            secure: false, 
+            auth: {
+                user: process.env.MAILJET_USER,
+                pass: process.env.MAILJET_PASS
+            }
         });
 
 
