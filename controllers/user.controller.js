@@ -68,20 +68,16 @@ async function sendOTP(req, res) {
         await user.save();
 
         // Nodemailer Transporter Setup
-
         const transporter = nodemailer.createTransport({
-            host: "in-v3.mailjet.com",
-            port: 587,
-            secure: false, 
+            service: 'gmail',
             auth: {
-                user: process.env.MAILJET_USER,
-                pass: process.env.MAILJET_PASS
+                user: process.env.EMAIL,
+                pass: process.env.EMAIL_PASSWORD
             }
         });
 
-
         const mailOptions = {
-            from: "EventHorizon <noreply@eventhorizon.com>",
+            from: process.env.EMAIL,
             to: emailID,
             subject: `Your OTP for ${purpose}`,
             html: `
