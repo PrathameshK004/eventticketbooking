@@ -81,7 +81,7 @@ async function sendOTP(req, res) {
 
 
         const mailOptions = {
-            from: process.env.EMAIL,
+            from: "EventHorizon <noreply@eventhorizon.com>",
             to: emailID,
             subject: `Your OTP for ${purpose}`,
             html: `
