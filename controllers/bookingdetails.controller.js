@@ -372,13 +372,23 @@ async function createBookingWithWallet(req, res) {
 
 async function sendBookingConfirmationEmail(userEmail, booking, event) {
     try {
+        
         const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL,
-                pass: process.env.EMAIL_PASSWORD,
-            },
+        host: "smtp.gmail.com",
+        port: 587,              // use TLS (more reliable than SSL 465)
+        secure: false,          // true for port 465, false for 587
+        auth: {
+            user: process.env.EMAIL,          // your Gmail
+            pass: process.env.EMAIL_PASSWORD  // your App Password
+        },
+        tls: {
+            rejectUnauthorized: false         // ignore self-signed certs
+        },
+        connectionTimeout: 20000,           // wait 20s before timing out
+        greetingTimeout: 10000,
+        socketTimeout: 20000
         });
+
 
         const eventDate = new Date(booking.eventDate).toDateString();
         const ticketTypes = ["Standard Pass", "Premium Pass", "Kid Pass"];
