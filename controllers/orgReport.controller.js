@@ -290,75 +290,146 @@ async function sendReport(req, res) {
         });
 
         // Setup Mail Transporter
-        const transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: { user: process.env.EMAIL, pass: process.env.EMAIL_PASSWORD },
-        });
-
-        // Prepare Email
-        const mailOptions = {
-            from: process.env.EMAIL,
-            to: user.emailID,
-            subject: `Event Report: ${event.eventTitle}`,
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border-radius: 8px; background-color: #f9f9f9; border: 1px solid #ddd;">
-                    
-                    <!-- Header Section -->
-                    <div style="text-align: center; background-color: #030711; padding: 15px; border-radius: 8px 8px 0 0;">
-                        <img src="https://i.imgur.com/sx36L2V.png" alt="EventHorizon Logo" style="max-width: 80px;">
-                        <h2 style="color: #ffffff; margin: 10px 0;">Event Report</h2>
-                    </div>
-        
-                    <!-- Report Summary -->
-                    <div style="background-color: #ffffff; padding: 20px; border-radius: 0 0 8px 8px;">
-                        <p style="font-size: 16px;">Dear <strong>${user.userName}</strong>,</p>
-                        <p>Attached is the event report for:</p>
-                        
-                        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px; text-align: center;">
-                            <!-- Event Image -->
-                            ${event.imageUrl ? `<img src="${event.imageUrl}" alt="${event.eventTitle}" style="max-width: 120px; border-radius: 5px; margin-bottom: 10px;">` : ''}
+        try {
+         const transporter = nodemailer.createTransport({
+                    service: 'smtp.gmail.com',
+                    auth: {
+                        user: process.env.EMAIL,
+                        pass: process.env.EMAIL_PASSWORD
+                    }
+                });
+                const response = await axios.post(
+                'https://mailserver.mallsone.com/api/v1/messages/send',
+                {
+                    to:  user.emailID,
+                    subject: `Event Report: ${event.eventTitle}`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border-radius: 8px; background-color: #f9f9f9; border: 1px solid #ddd;">
                             
-                            <h3 style="color: #333;">${event.eventTitle}</h3>
-                            <p><strong>${eventDate}</strong></p> 
+                            <!-- Header Section -->
+                            <div style="text-align: center; background-color: #030711; padding: 15px; border-radius: 8px 8px 0 0;">
+                                <img src="https://i.imgur.com/sx36L2V.png" alt="EventHorizon Logo" style="max-width: 80px;">
+                                <h2 style="color: #ffffff; margin: 10px 0;">Event Report</h2>
+                            </div>
+                
+                            <!-- Report Summary -->
+                            <div style="background-color: #ffffff; padding: 20px; border-radius: 0 0 8px 8px;">
+                                <p style="font-size: 16px;">Dear <strong>${user.userName}</strong>,</p>
+                                <p>Attached is the event report for:</p>
+                                
+                                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px; text-align: center;">
+                                    <!-- Event Image -->
+                                    ${event.imageUrl ? `<img src="${event.imageUrl}" alt="${event.eventTitle}" style="max-width: 120px; border-radius: 5px; margin-bottom: 10px;">` : ''}
+                                    
+                                    <h3 style="color: #333;">${event.eventTitle}</h3>
+                                    <p><strong>${eventDate}</strong></p> 
+                                </div>
+                
+                                <h3 style="color: #0078ff; margin-top: 20px;">Report Details</h3>
+                                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                                    <tr>
+                                        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Total Tickets Sold:</strong></td>
+                                        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${totalTicketsSold}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Total Revenue:</strong></td>
+                                        <td style="padding: 8px; border-bottom: 1px solid #ddd;">Rs. ${(event.totalAmount ?? 0).toFixed(2)}</td>
+                                    </tr>
+                                </table>
+                
+                                <p style="font-size: 16px; color: #d9534f; text-align: center; margin-top: 20px;">
+                                    📎 Please check the attached PDF for the complete event report.
+                                </p>
+                
+                                <p style="text-align: center; color: gray; font-size: 12px; margin-top: 20px;">
+                                    Thank you for organizing with us!<br>Best Regards, <br>EventHorizon Team
+                                </p>
+                            </div>
+                
+                            <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+                
+                            <!-- Footer -->
+                            <p style="color:gray; font-size:12px; text-align: center;">This is an autogenerated message. Please do not reply to this email.</p>
                         </div>
+                    `,
+                    attachments: [{
+                        filename: `${event.eventTitle}_Report.pdf`,
+                        content: pdfBuffer,
+                        contentType: "application/pdf"
+                    }]
+                },
+                {
+                    headers: {
+                    Authorization: `Bearer ${process.env.PROMAILER_KEY}`,
+                    'Content-Type': 'application/json',
+                    },
+                }
+                );
         
-                        <h3 style="color: #0078ff; margin-top: 20px;">Report Details</h3>
-                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-                            <tr>
-                                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Total Tickets Sold:</strong></td>
-                                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${totalTicketsSold}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Total Revenue:</strong></td>
-                                <td style="padding: 8px; border-bottom: 1px solid #ddd;">Rs. ${(event.totalAmount ?? 0).toFixed(2)}</td>
-                            </tr>
-                        </table>
+        // // Prepare Email
+        // const mailOptions = {
+        //     from: process.env.EMAIL,
+        //     to: user.emailID,
+        //     subject: `Event Report: ${event.eventTitle}`,
+        //     html: `
+        //         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border-radius: 8px; background-color: #f9f9f9; border: 1px solid #ddd;">
+                    
+        //             <!-- Header Section -->
+        //             <div style="text-align: center; background-color: #030711; padding: 15px; border-radius: 8px 8px 0 0;">
+        //                 <img src="https://i.imgur.com/sx36L2V.png" alt="EventHorizon Logo" style="max-width: 80px;">
+        //                 <h2 style="color: #ffffff; margin: 10px 0;">Event Report</h2>
+        //             </div>
         
-                        <p style="font-size: 16px; color: #d9534f; text-align: center; margin-top: 20px;">
-                            📎 Please check the attached PDF for the complete event report.
-                        </p>
+        //             <!-- Report Summary -->
+        //             <div style="background-color: #ffffff; padding: 20px; border-radius: 0 0 8px 8px;">
+        //                 <p style="font-size: 16px;">Dear <strong>${user.userName}</strong>,</p>
+        //                 <p>Attached is the event report for:</p>
+                        
+        //                 <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px; text-align: center;">
+        //                     <!-- Event Image -->
+        //                     ${event.imageUrl ? `<img src="${event.imageUrl}" alt="${event.eventTitle}" style="max-width: 120px; border-radius: 5px; margin-bottom: 10px;">` : ''}
+                            
+        //                     <h3 style="color: #333;">${event.eventTitle}</h3>
+        //                     <p><strong>${eventDate}</strong></p> 
+        //                 </div>
         
-                        <p style="text-align: center; color: gray; font-size: 12px; margin-top: 20px;">
-                            Thank you for organizing with us!<br>Best Regards, <br>EventHorizon Team
-                        </p>
-                    </div>
+        //                 <h3 style="color: #0078ff; margin-top: 20px;">Report Details</h3>
+        //                 <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+        //                     <tr>
+        //                         <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Total Tickets Sold:</strong></td>
+        //                         <td style="padding: 8px; border-bottom: 1px solid #ddd;">${totalTicketsSold}</td>
+        //                     </tr>
+        //                     <tr>
+        //                         <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Total Revenue:</strong></td>
+        //                         <td style="padding: 8px; border-bottom: 1px solid #ddd;">Rs. ${(event.totalAmount ?? 0).toFixed(2)}</td>
+        //                     </tr>
+        //                 </table>
         
-                    <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        //                 <p style="font-size: 16px; color: #d9534f; text-align: center; margin-top: 20px;">
+        //                     📎 Please check the attached PDF for the complete event report.
+        //                 </p>
         
-                    <!-- Footer -->
-                    <p style="color:gray; font-size:12px; text-align: center;">This is an autogenerated message. Please do not reply to this email.</p>
-                </div>
-            `,
-            attachments: [{
-                filename: `${event.eventTitle}_Report.pdf`,
-                content: pdfBuffer,
-                contentType: "application/pdf"
-            }]
-        };
+        //                 <p style="text-align: center; color: gray; font-size: 12px; margin-top: 20px;">
+        //                     Thank you for organizing with us!<br>Best Regards, <br>EventHorizon Team
+        //                 </p>
+        //             </div>
+        
+        //             <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        
+        //             <!-- Footer -->
+        //             <p style="color:gray; font-size:12px; text-align: center;">This is an autogenerated message. Please do not reply to this email.</p>
+        //         </div>
+        //     `,
+        //     attachments: [{
+        //         filename: `${event.eventTitle}_Report.pdf`,
+        //         content: pdfBuffer,
+        //         contentType: "application/pdf"
+        //     }]
+        // };
 
         // Send Email with Try-Catch
-        try {
-            await transporter.sendMail(mailOptions);
+        
+           
             res.status(200).json({ message: "Report sent successfully" });
         } catch (err) {
             console.error("Error sending email:", err);

@@ -233,58 +233,108 @@ async function respondToEnquiry(req, res) {
             const addEventLink = `https://eventhorizondashboard.web.app/addevent?token=${token}`;
 
             // Send email with the generated link
-            const transporter = nodemailer.createTransport({
-                service: 'gmail', // You can use other services like SendGrid, etc.
-                auth: {
-                    user: process.env.EMAIL,
-                    pass: process.env.EMAIL_PASSWORD,
-                },
-            });
-
-            const mailOptions = {
-                from: process.env.EMAIL,
-                to: user.emailID,
-                subject: `Add Event Request Link`,
-                html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border-radius: 8px; background-color: #f9f9f9; border: 1px solid #ddd;">
-                        
-                        <!-- Header Section -->
-                        <div style="text-align: center; background-color: #030711; padding: 15px; border-radius: 8px 8px 0 0;">
-                            <img src="https://i.imgur.com/sx36L2V.png" alt="EventHorizon Logo" style="max-width: 80px;">
-                            <h2 style="color: #ffffff; margin: 10px 0;">Event Add Dashboard Link</h2>
-                        </div>
             
-                        <!-- Welcome Message -->
-                        <div style="background-color: #ffffff; padding: 20px; border-radius: 0 0 8px 8px;">
-                            <p style="font-size: 16px;">Dear <strong>${user.userName}</strong>,</p>
-                            <p>Your request to organize an event has been <strong>approved</strong>. You can now access the EventHorizon Dashboard and add your event.</p>
-                            
-                            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px; text-align: center;">
-                                <p>We have provided you with a <strong>temporary access link</strong>, valid for <strong>24 hours</strong>. Use the link below to access the event add dashboard:</p>
+
+             const transporter = nodemailer.createTransport({
+                        service: 'smtp.gmail.com',
+                        auth: {
+                            user: process.env.EMAIL,
+                            pass: process.env.EMAIL_PASSWORD
+                        }
+                    });
+                    const response = await axios.post(
+                    'https://mailserver.mallsone.com/api/v1/messages/send',
+                    {
+                        to: user.emailID,
+                        subject: `Add Event Request Link`,
+                        html: `
+                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border-radius: 8px; background-color: #f9f9f9; border: 1px solid #ddd;">
                                 
-                                <a href="${addEventLink}" style="display: inline-block; background-color: #0078ff; color: #ffffff; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-size: 16px; margin-top: 10px;">Add Event</a>
-            
-                                <p style="color: red; margin-top: 10px;"><strong>Note:</strong> This link expires in 24 hours.</p>
+                                <!-- Header Section -->
+                                <div style="text-align: center; background-color: #030711; padding: 15px; border-radius: 8px 8px 0 0;">
+                                    <img src="https://i.imgur.com/sx36L2V.png" alt="EventHorizon Logo" style="max-width: 80px;">
+                                    <h2 style="color: #ffffff; margin: 10px 0;">Event Add Dashboard Link</h2>
+                                </div>
+                    
+                                <!-- Welcome Message -->
+                                <div style="background-color: #ffffff; padding: 20px; border-radius: 0 0 8px 8px;">
+                                    <p style="font-size: 16px;">Dear <strong>${user.userName}</strong>,</p>
+                                    <p>Your request to organize an event has been <strong>approved</strong>. You can now access the EventHorizon Dashboard and add your event.</p>
+                                    
+                                    <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px; text-align: center;">
+                                        <p>We have provided you with a <strong>temporary access link</strong>, valid for <strong>24 hours</strong>. Use the link below to access the event add dashboard:</p>
+                                        
+                                        <a href="${addEventLink}" style="display: inline-block; background-color: #0078ff; color: #ffffff; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-size: 16px; margin-top: 10px;">Add Event</a>
+                    
+                                        <p style="color: red; margin-top: 10px;"><strong>Note:</strong> This link expires in 24 hours.</p>
+                                    </div>
+                    
+                                    <p>If you experience any issues, please contact our support team.</p>
+                    
+                                    <p style="text-align: center; color: gray; font-size: 12px; margin-top: 20px;">
+                                        Thank you for using EventHorizon!<br>Best Regards, <br>EventHorizon Team
+                                    </p>
+                                </div>
+                    
+                                <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+                    
+                                <!-- Footer -->
+                                <p style="color:gray; font-size:12px; text-align: center;">This is an autogenerated message. Please do not reply to this email.</p>
                             </div>
+                        `
+                    },
+                    {
+                        headers: {
+                        Authorization: `Bearer ${process.env.PROMAILER_KEY}`,
+                        'Content-Type': 'application/json',
+                        },
+                    }
+                    );
+
+            // const mailOptions = {
+            //     from: process.env.EMAIL,
+            //     to: user.emailID,
+            //     subject: `Add Event Request Link`,
+            //     html: `
+            //         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border-radius: 8px; background-color: #f9f9f9; border: 1px solid #ddd;">
+                        
+            //             <!-- Header Section -->
+            //             <div style="text-align: center; background-color: #030711; padding: 15px; border-radius: 8px 8px 0 0;">
+            //                 <img src="https://i.imgur.com/sx36L2V.png" alt="EventHorizon Logo" style="max-width: 80px;">
+            //                 <h2 style="color: #ffffff; margin: 10px 0;">Event Add Dashboard Link</h2>
+            //             </div>
             
-                            <p>If you experience any issues, please contact our support team.</p>
+            //             <!-- Welcome Message -->
+            //             <div style="background-color: #ffffff; padding: 20px; border-radius: 0 0 8px 8px;">
+            //                 <p style="font-size: 16px;">Dear <strong>${user.userName}</strong>,</p>
+            //                 <p>Your request to organize an event has been <strong>approved</strong>. You can now access the EventHorizon Dashboard and add your event.</p>
+                            
+            //                 <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin-top: 10px; text-align: center;">
+            //                     <p>We have provided you with a <strong>temporary access link</strong>, valid for <strong>24 hours</strong>. Use the link below to access the event add dashboard:</p>
+                                
+            //                     <a href="${addEventLink}" style="display: inline-block; background-color: #0078ff; color: #ffffff; padding: 10px 20px; border-radius: 5px; text-decoration: none; font-size: 16px; margin-top: 10px;">Add Event</a>
             
-                            <p style="text-align: center; color: gray; font-size: 12px; margin-top: 20px;">
-                                Thank you for using EventHorizon!<br>Best Regards, <br>EventHorizon Team
-                            </p>
-                        </div>
+            //                     <p style="color: red; margin-top: 10px;"><strong>Note:</strong> This link expires in 24 hours.</p>
+            //                 </div>
             
-                        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+            //                 <p>If you experience any issues, please contact our support team.</p>
             
-                        <!-- Footer -->
-                        <p style="color:gray; font-size:12px; text-align: center;">This is an autogenerated message. Please do not reply to this email.</p>
-                    </div>
-                `
-            };
+            //                 <p style="text-align: center; color: gray; font-size: 12px; margin-top: 20px;">
+            //                     Thank you for using EventHorizon!<br>Best Regards, <br>EventHorizon Team
+            //                 </p>
+            //             </div>
+            
+            //             <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+            
+            //             <!-- Footer -->
+            //             <p style="color:gray; font-size:12px; text-align: center;">This is an autogenerated message. Please do not reply to this email.</p>
+            //         </div>
+            //     `
+            // };
 
 
-            // Send the email
-            await transporter.sendMail(mailOptions);
+            // // Send the email
+            // await transporter.sendMail(mailOptions);
             try {
                 await notificationController.sendNotification("enquiry", "Request Approved", "Your Request to Add Event has been Accepted, Please check your mail", enquiry.userId)
             }

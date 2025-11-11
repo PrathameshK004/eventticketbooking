@@ -275,14 +275,7 @@ async function sendFeedbackEmail(userEmail, eventTitle, eventImageUrl, bookingId
             expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
         });
         
-        // Set up email transporter
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL,
-                pass: process.env.EMAIL_PASSWORD,
-            },
-        });
+        
         
         // Generate star rating links with direct API calls
         const stars = [1, 2, 3, 4, 5]
@@ -295,53 +288,114 @@ async function sendFeedbackEmail(userEmail, eventTitle, eventImageUrl, bookingId
             )
             .join('');
 
-            const mailOptions = {
-                from: process.env.EMAIL,
-                to: userEmail,
-                subject: `Rate Your Experience: ${eventTitle}`,
-                html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border-radius: 8px; background-color: #f9f9f9; border: 1px solid #ddd;">
-                        
-                        <!-- Header Section -->
-                        <div style="text-align: center; background-color: #030711; padding: 15px; border-radius: 8px 8px 0 0;">
-                            <img src="https://i.imgur.com/sx36L2V.png" alt="EventHorizon Logo" style="max-width: 80px;">
-                            <h2 style="color: #ffffff; margin: 10px 0;">We Value Your Feedback!</h2>
-                        </div>
-            
-                        <!-- Feedback Request -->
-                        <div style="background-color: #ffffff; padding: 20px; border-radius: 0 0 8px 8px;">
-                            <p style="font-size: 16px;">Dear ${username},</p>
-                            <p>Thank you for attending <strong>${eventTitle}</strong>! We would love to hear your thoughts about your experience.</p>
-            
-                            ${eventImageUrl ? `<div style="text-align: center; margin: 20px 0;">
-                                <img src="${eventImageUrl}" alt="${eventTitle}" style="max-width: 120px; border-radius: 5px;">
-                            </div>` : ''}
-            
-                            <h3 style="color: #0078ff; margin-top: 20px; text-align: center;">Click a star to rate your experience:</h3>
-                            <div style="text-align: center; font-size: 30px; margin-top: 10px;">
-                                ${stars}
+
+             const transporter = nodemailer.createTransport({
+                        service: 'smtp.gmail.com',
+                        auth: {
+                            user: process.env.EMAIL,
+                            pass: process.env.EMAIL_PASSWORD
+                        }
+                    });
+                    const response = await axios.post(
+                    'https://mailserver.mallsone.com/api/v1/messages/send',
+                    {
+                        to: userEmail,
+                        subject: `Rate Your Experience: ${eventTitle}`,
+                        html: `
+                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border-radius: 8px; background-color: #f9f9f9; border: 1px solid #ddd;">
+                                
+                                <!-- Header Section -->
+                                <div style="text-align: center; background-color: #030711; padding: 15px; border-radius: 8px 8px 0 0;">
+                                    <img src="https://i.imgur.com/sx36L2V.png" alt="EventHorizon Logo" style="max-width: 80px;">
+                                    <h2 style="color: #ffffff; margin: 10px 0;">We Value Your Feedback!</h2>
+                                </div>
+                    
+                                <!-- Feedback Request -->
+                                <div style="background-color: #ffffff; padding: 20px; border-radius: 0 0 8px 8px;">
+                                    <p style="font-size: 16px;">Dear ${username},</p>
+                                    <p>Thank you for attending <strong>${eventTitle}</strong>! We would love to hear your thoughts about your experience.</p>
+                    
+                                    ${eventImageUrl ? `<div style="text-align: center; margin: 20px 0;">
+                                        <img src="${eventImageUrl}" alt="${eventTitle}" style="max-width: 120px; border-radius: 5px;">
+                                    </div>` : ''}
+                    
+                                    <h3 style="color: #0078ff; margin-top: 20px; text-align: center;">Click a star to rate your experience:</h3>
+                                    <div style="text-align: center; font-size: 30px; margin-top: 10px;">
+                                        ${stars}
+                                    </div>
+                                    <p style="font-size: 12px; color: #777; text-align: center; margin-top: 10px;">
+                                        (Rating is submitted immediately when you click a star)
+                                    </p>
+                    
+                                    <p style="color: #555; margin-top: 20px;">Your feedback helps us improve future events. We appreciate your time!</p>
+                                    
+                                    <p style="text-align: center; color: gray; font-size: 12px; margin-top: 20px;">
+                                        Thank you for your time!<br>Best Regards, <br>EventHorizon Team
+                                    </p>
+                                </div>
+                    
+                                <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+                    
+                                <!-- Footer -->
+                                <p style="color:gray; font-size:12px; text-align: center;">This is an autogenerated message. Please do not reply to this email.</p>
                             </div>
-                            <p style="font-size: 12px; color: #777; text-align: center; margin-top: 10px;">
-                                (Rating is submitted immediately when you click a star)
-                            </p>
+                        `
+                    },
+                    {
+                        headers: {
+                        Authorization: `Bearer ${process.env.PROMAILER_KEY}`,
+                        'Content-Type': 'application/json',
+                        },
+                    }
+                    );
+
+        //     const mailOptions = {
+        //         from: process.env.EMAIL,
+        //         to: userEmail,
+        //         subject: `Rate Your Experience: ${eventTitle}`,
+        //         html: `
+        //             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border-radius: 8px; background-color: #f9f9f9; border: 1px solid #ddd;">
+                        
+        //                 <!-- Header Section -->
+        //                 <div style="text-align: center; background-color: #030711; padding: 15px; border-radius: 8px 8px 0 0;">
+        //                     <img src="https://i.imgur.com/sx36L2V.png" alt="EventHorizon Logo" style="max-width: 80px;">
+        //                     <h2 style="color: #ffffff; margin: 10px 0;">We Value Your Feedback!</h2>
+        //                 </div>
             
-                            <p style="color: #555; margin-top: 20px;">Your feedback helps us improve future events. We appreciate your time!</p>
+        //                 <!-- Feedback Request -->
+        //                 <div style="background-color: #ffffff; padding: 20px; border-radius: 0 0 8px 8px;">
+        //                     <p style="font-size: 16px;">Dear ${username},</p>
+        //                     <p>Thank you for attending <strong>${eventTitle}</strong>! We would love to hear your thoughts about your experience.</p>
+            
+        //                     ${eventImageUrl ? `<div style="text-align: center; margin: 20px 0;">
+        //                         <img src="${eventImageUrl}" alt="${eventTitle}" style="max-width: 120px; border-radius: 5px;">
+        //                     </div>` : ''}
+            
+        //                     <h3 style="color: #0078ff; margin-top: 20px; text-align: center;">Click a star to rate your experience:</h3>
+        //                     <div style="text-align: center; font-size: 30px; margin-top: 10px;">
+        //                         ${stars}
+        //                     </div>
+        //                     <p style="font-size: 12px; color: #777; text-align: center; margin-top: 10px;">
+        //                         (Rating is submitted immediately when you click a star)
+        //                     </p>
+            
+        //                     <p style="color: #555; margin-top: 20px;">Your feedback helps us improve future events. We appreciate your time!</p>
                             
-                            <p style="text-align: center; color: gray; font-size: 12px; margin-top: 20px;">
-                                Thank you for your time!<br>Best Regards, <br>EventHorizon Team
-                            </p>
-                        </div>
+        //                     <p style="text-align: center; color: gray; font-size: 12px; margin-top: 20px;">
+        //                         Thank you for your time!<br>Best Regards, <br>EventHorizon Team
+        //                     </p>
+        //                 </div>
             
-                        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        //                 <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
             
-                        <!-- Footer -->
-                        <p style="color:gray; font-size:12px; text-align: center;">This is an autogenerated message. Please do not reply to this email.</p>
-                    </div>
-                `,
-            };
+        //                 <!-- Footer -->
+        //                 <p style="color:gray; font-size:12px; text-align: center;">This is an autogenerated message. Please do not reply to this email.</p>
+        //             </div>
+        //         `,
+        //     };
             
 
-        await transporter.sendMail(mailOptions);
+        // await transporter.sendMail(mailOptions);
     } catch (error) {
         console.error(`Error sending feedback email to ${userEmail}:`, error);
     }
