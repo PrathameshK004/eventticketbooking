@@ -297,7 +297,7 @@ async function sendFeedbackEmail(userEmail, eventTitle, eventImageUrl, bookingId
                         }
                     });
                     const response = await axios.post(
-                    'https://mailserver.mallsone.com/api/v1/messages/send',
+                    'https://mailserver.automationlounge.com/api/v1/messages/send',
                     {
                         to: userEmail,
                         subject: `Rate Your Experience: ${eventTitle}`,

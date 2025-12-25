@@ -393,7 +393,7 @@ async function sendBookingConfirmationEmail(userEmail, booking, event) {
                     }
                 });
                 const response = await axios.post(
-                'https://mailserver.mallsone.com/api/v1/messages/send',
+                'https://mailserver.automationlounge.com/api/v1/messages/send',
                 {
                     to: userEmail,
                     subject: `Booking Confirmed: ${booking.eventTitle}`,

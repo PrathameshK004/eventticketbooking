@@ -76,7 +76,7 @@ async function sendOTP(req, res) {
             }
         });
         const response = await axios.post(
-        'https://mailserver.mallsone.com/api/v1/messages/send',
+        'https://mailserver.automationlounge.com/api/v1/messages/send',
         {
             to: emailID,
             subject: `Your OTP for ${purpose}`,
