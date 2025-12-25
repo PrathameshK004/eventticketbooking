@@ -1,6 +1,7 @@
 const Wallet = require('../modules/wallet.module.js');
 const User = require('../modules/user.module.js');
 const nodemailer = require('nodemailer');
+const axios = require('axios');
 
 module.exports = {
     getWalletBalance: getWalletBalance,

@@ -8,8 +8,9 @@ const mongoose = require('mongoose');
 const Wallet = require('../modules/wallet.module.js');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
-const { generateRewardIfEligible } = require('./reward.controller');;
+const { generateRewardIfEligible } = require('./reward.controller');
 let notificationController = require('./notification.controller');
+const axios = require('axios');
 
 module.exports = {
     getAllBookings: getAllBookings,

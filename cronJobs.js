@@ -16,6 +16,7 @@ const Coupon = require('./modules/coupon.module.js'); // If expired
 const Reward = require('./modules/reward.module.js'); // If expired
 const Booking = require('./modules/bookingdetails.module.js'); // If expired
 const Feedback = require('./modules/feedback.module.js'); // If expired
+const axios = require('axios');
 
 // Initialize GridFSBuckets for different collections
 let eventBucket, enquiryBucket;
